@@ -1,0 +1,526 @@
+{
+    "database": {
+        "host": "localhost",
+        "port": 3306,
+        "user": "root",
+        "passwd": "root",
+        "db": "pet_game"
+    },
+    "default": {
+        "score": 0,
+        "power": 100,
+        "signin_score": 50000,
+        "work_interval": 3600,
+        "power_cost_of_practice": 10
+    },
+    "levels": [
+        {
+            "grade": "宝宝",
+            "level": "",
+            "score": 0,
+            "earning": 0,
+            "practices": [],
+            "benefits_description": ""
+        },
+        {
+            "grade": "",
+            "level": "一级",
+            "score": 500,
+            "earning": 1000,
+            "practices": [
+                {
+                    "rate": 0.10,
+                    "score": 0.01,
+                    "condition": "lose"
+                }
+            ],
+            "benefits_description": "有百分之十几率获得已损失百分之1一的游戏分"
+        },
+        {
+            "grade": "",
+            "level": "二级",
+            "score": 50000,
+            "earning": 2000,
+            "practices": [
+                {
+                    "rate": 0.15,
+                    "score": 0.01,
+                    "condition": "lose"
+                }
+            ],
+            "benefits_description": "有百分之十五几率获得已损失百分之1一的游戏分"
+        },
+        {
+            "grade": "",
+            "level": "三级",
+            "score": 500000,
+            "earning": 3000,
+            "practices": [
+                {
+                    "rate": 0.20,
+                    "score": 0.01,
+                    "condition": "lose"
+                }
+            ],
+            "benefits_description": "有百分之二十几率获得已损失百分之1一的游戏分"
+        },
+        {
+            "grade": "",
+            "level": "四级",
+            "score": 1000000,
+            "earning": 4000,
+            "practices": [
+                {
+                    "rate": 0.25,
+                    "score": 0.01,
+                    "condition": "lose"
+                }
+            ],
+            "benefits_description": "有百分之二十五几率获得已损失百分之1一的游戏分"
+        },
+        {
+            "grade": "",
+            "level": "五级",
+            "score": 2000000,
+            "earning": 5000,
+            "practices": [
+                {
+                    "rate": 0.30,
+                    "score": 0.02,
+                    "condition": "lose"
+                }
+            ],
+            "benefits_description": "有百分之三十几率获得已损失百分之2一的游戏分"
+        },
+        {
+            "grade": "",
+            "level": "六级",
+            "score": 3000000,
+            "earning": 6000,
+            "practices": [
+                {
+                    "rate": 0.35,
+                    "score": 0.02,
+                    "condition": "lose"
+                }
+            ],
+            "benefits_description": "有百分之三十五几率获得已损失百分之2一的游戏分"
+        },
+        {
+            "grade": "",
+            "level": "七级",
+            "score": 5000000,
+            "earning": 7000,
+            "practices": [
+                {
+                    "rate": 0.40,
+                    "score": 0.03,
+                    "condition": "lose"
+                }
+            ],
+            "benefits_description": "有百分之四十几率获得已损失百分之3的游戏分"
+        },
+        {
+            "grade": "",
+            "level": "八级",
+            "score": 10000000,
+            "earning": 8000,
+            "practices": [
+                {
+                    "rate": 0.45,
+                    "score": 0.04,
+                    "condition": "lose"
+                }
+            ],
+            "benefits_description": "有百分之四十五几率获得已损失百分之4的游戏分"
+        },
+        {
+            "grade": "",
+            "level": "九级",
+            "score": 20000000,
+            "earning": 9000,
+            "practices": [
+                {
+                    "rate": 0.50,
+                    "score": 0.04,
+                    "condition": "lose"
+                }
+            ],
+            "benefits_description": "有百分之五十几率获得已损失百分之4的游戏分"
+        },
+        {
+            "grade": "",
+            "level": "十级",
+            "score": 40000000,
+            "earning": 10000,
+            "practices": [
+                {
+                    "rate": 0.50,
+                    "score": 0.05,
+                    "condition": "lose"
+                }
+            ],
+            "benefits_description": "有百分之五十几率获得以损失百分之5的游戏分"
+        },
+        {
+            "grade": "仙级",
+            "level": "一级",
+            "score": 200000000,
+            "earning": 20000,
+            "practices": [
+                {
+                    "rate": 0.02,
+                    "score": 100000000
+                },
+                {
+                    "rate": 0.50,
+                    "score": 0.05,
+                    "condition": "lose"
+                }
+            ],
+            "benefits_description": "有百分之五十几率获得以损失百分之5的游戏分   百分之二几率获得一亿积分"
+        },
+        {
+            "grade": "仙级",
+            "level": "二级",
+            "score": 200000000,
+            "earning": 40000,
+            "practices": [
+                {
+                    "rate": 0.04,
+                    "score": 100000000
+                },
+                {
+                    "rate": 0.50,
+                    "score": 0.05,
+                    "condition": "lose"
+                }
+            ],
+            "benefits_description": "有百分之五十几率获得以损失百分之5的游戏分   百分之四几率获得一亿积分"
+        },
+        {
+            "grade": "仙级",
+            "level": "三级",
+            "score": 200000000,
+            "earning": 60000,
+            "practices": [
+                {
+                    "rate": 0.06,
+                    "score": 100000000
+                },
+                {
+                    "rate": 0.50,
+                    "score": 0.05,
+                    "condition": "lose"
+                }
+            ],
+            "benefits_description": "有百分之五十几率获得以损失百分之5的游戏分   百分之六几率获得一亿积分"
+        },
+        {
+            "grade": "仙级",
+            "level": "四级",
+            "score": 200000000,
+            "earning": 80000,
+            "practices": [
+                {
+                    "rate": 0.08,
+                    "score": 100000000
+                },
+                {
+                    "rate": 0.50,
+                    "score": 0.05,
+                    "condition": "lose"
+                }
+            ],
+            "benefits_description": "有百分之五十几率获得以损失百分之5的游戏分   百分之八几率获得一亿积分"
+        },
+        {
+            "grade": "仙级",
+            "level": "五级",
+            "score": 200000000,
+            "earning": 100000,
+            "practices": [
+                {
+                    "rate": 0.10,
+                    "score": 100000000
+                },
+                {
+                    "rate": 0.50,
+                    "score": 0.05,
+                    "condition": "lose"
+                }
+            ],
+            "benefits_description": "有百分之五十几率获得以损失百分之5的游戏分   百分之十几率获得一亿积分"
+        },
+        {
+            "grade": "仙级",
+            "level": "六级",
+            "score": 200000000,
+            "earning": 120000,
+            "practices": [
+                {
+                    "rate": 0.12,
+                    "score": 100000000
+                },
+                {
+                    "rate": 0.50,
+                    "score": 0.05,
+                    "condition": "lose"
+                }
+            ],
+            "benefits_description": "有百分之五十几率获得以损失百分之5的游戏分   百分之十二几率获得一亿积分"
+        },
+        {
+            "grade": "仙级",
+            "level": "七级",
+            "score": 200000000,
+            "earning": 140000,
+            "practices": [
+                {
+                    "rate": 0.14,
+                    "score": 100000000
+                },
+                {
+                    "rate": 0.50,
+                    "score": 0.05,
+                    "condition": "lose"
+                }
+            ],
+            "benefits_description": "有百分之五十几率获得以损失百分之5的游戏分   百分之十四几率获得一亿积分"
+        },
+        {
+            "grade": "仙级",
+            "level": "八级",
+            "score": 200000000,
+            "earning": 160000,
+            "practices": [
+                {
+                    "rate": 0.16,
+                    "score": 100000000
+                },
+                {
+                    "rate": 0.50,
+                    "score": 0.05,
+                    "condition": "lose"
+                }
+            ],
+            "benefits_description": "有百分之五十几率获得以损失百分之5的游戏分   百分之十六几率获得一亿积分"
+        },
+        {
+            "grade": "仙级",
+            "level": "九级",
+            "score": 200000000,
+            "earning": 180000,
+            "practices": [
+                {
+                    "rate": 0.18,
+                    "score": 100000000
+                },
+                {
+                    "rate": 0.50,
+                    "score": 0.05,
+                    "condition": "lose"
+                }
+            ],
+            "benefits_description": "有百分之五十几率获得以损失百分之5的游戏分   百分之十八几率获得一亿积分"
+        },
+        {
+            "grade": "仙级",
+            "level": "十级",
+            "score": 200000000,
+            "earning": 200000,
+            "practices": [
+                {
+                    "rate": 0.20,
+                    "score": 100000000
+                },
+                {
+                    "rate": 0.50,
+                    "score": 0.05,
+                    "condition": "lose"
+                }
+            ],
+            "benefits_description": "有百分之五十几率获得以损失百分之5的游戏分   百分之二十几率获得一亿积分"
+        },
+        {
+            "grade": "神级",
+            "level": "一级",
+            "score": 1000000000,
+            "earning": 1000000,
+            "practices": [
+                {
+                    "rate": 0.30,
+                    "score": 100000000
+                },
+                {
+                    "rate": 1.00,
+                    "score": 0.05,
+                    "condition": "lose"
+                }
+            ],
+            "benefits_description": "有百分之百几率获得以损失百分之五的游戏分   百分之三十几率获得一亿积分"
+        },
+        {
+            "grade": "神级",
+            "level": "二级",
+            "score": 3000000000,
+            "earning": 2000000,
+            "practices": [
+                {
+                    "rate": 0.30,
+                    "score": 200000000
+                },
+                {
+                    "rate": 1.00,
+                    "score": 0.05,
+                    "condition": "lose"
+                }
+            ],
+            "benefits_description": "有百分之百几率获得以损失百分之五的游戏分   百分之三十几率获得二亿积分"
+        },
+        {
+            "grade": "神级",
+            "level": "三级",
+            "score": 6000000000,
+            "earning": 3000000,
+            "practices": [
+                {
+                    "rate": 0.30,
+                    "score": 300000000
+                },
+                {
+                    "rate": 1.00,
+                    "score": 0.05,
+                    "condition": "lose"
+                }
+            ],
+            "benefits_description": "有百分之百几率获得以损失百分之五的游戏分   百分之三十几率获得三亿积分"
+        },
+        {
+            "grade": "神级",
+            "level": "四级",
+            "score": 10000000000,
+            "earning": 4000000,
+            "practices": [
+                {
+                    "rate": 0.30,
+                    "score": 400000000
+                },
+                {
+                    "rate": 1.00,
+                    "score": 0.05,
+                    "condition": "lose"
+                }
+            ],
+            "benefits_description": "有百分之百几率获得以损失百分之五的游戏分   百分之三十几率获得四亿积分"
+        },
+        {
+            "grade": "神级",
+            "level": "五级",
+            "score": 20000000000,
+            "earning": 5000000,
+            "practices": [
+                {
+                    "rate": 0.30,
+                    "score": 500000000
+                },
+                {
+                    "rate": 1.00,
+                    "score": 0.05,
+                    "condition": "lose"
+                }
+            ],
+            "benefits_description": "有百分之百几率获得以损失百分之五的游戏分   百分之三十几率获得五亿积分"
+        },
+        {
+            "grade": "神级",
+            "level": "六级",
+            "score": 30000000000,
+            "earning": 6000000,
+            "practices": [
+                {
+                    "rate": 0.30,
+                    "score": 600000000
+                },
+                {
+                    "rate": 1.00,
+                    "score": 0.05,
+                    "condition": "lose"
+                }
+            ],
+            "benefits_description": "有百分之百几率获得以损失百分之五的游戏分   百分之三十几率获得六亿积分"
+        },
+        {
+            "grade": "神级",
+            "level": "七级",
+            "score": 40000000000,
+            "earning": 7000000,
+            "practices": [
+                {
+                    "rate": 0.30,
+                    "score": 700000000
+                },
+                {
+                    "rate": 1.00,
+                    "score": 0.05,
+                    "condition": "lose"
+                }
+            ],
+            "benefits_description": "有百分之百几率获得以损失百分之五的游戏分   百分之三十几率获得七亿积分"
+        },
+        {
+            "grade": "神级",
+            "level": "八级",
+            "score": 50000000000,
+            "earning": 8000000,
+            "practices": [
+                {
+                    "rate": 0.30,
+                    "score": 800000000
+                },
+                {
+                    "rate": 1.00,
+                    "score": 0.05,
+                    "condition": "lose"
+                }
+            ],
+            "benefits_description": "有百分之百几率获得以损失百分之五的游戏分   百分之三十几率获得八亿积分"
+        },
+        {
+            "grade": "神级",
+            "level": "九级",
+            "score": 80000000000,
+            "earning": 9000000,
+            "practices": [
+                {
+                    "rate": 0.30,
+                    "score": 900000000
+                },
+                {
+                    "rate": 1.00,
+                    "score": 0.05,
+                    "condition": "lose"
+                }
+            ],
+            "benefits_description": "有百分之百几率获得以损失百分之五的游戏分   百分之三十几率获得九亿积分"
+        },
+        {
+            "grade": "神级",
+            "level": "十级",
+            "score": 100000000000,
+            "earning": 10000000,
+            "practices": [
+                {
+                    "rate": 0.30,
+                    "score": 1000000000
+                },
+                {
+                    "rate": 1.00,
+                    "score": 0.05,
+                    "condition": "lose"
+                }
+            ],
+            "benefits_description": "有百分之百几率获得以损失百分之五的游戏分   百分之三十几率获得十亿积分"
+        }
+    ]
+}
