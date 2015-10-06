@@ -64,5 +64,6 @@ class GroupMsg(MsgWithContent):
         MsgWithContent.__init__(self, json_input)
         self.group_code = json_input['value']['group_code']
         self.send_uin = json_input['value']['send_uin']
+        self.to_uin = json_input['value']['send_uin']
         self.seq = json_input['value']['seq']
         self.info_seq = json_input['value']['info_seq']

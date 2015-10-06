@@ -7,6 +7,8 @@ import cPickle
 
 from QQLogin import *
 from Configs import *
+from GameConfigs import *
+from GameUtil import *
 from Msg import *
 from HttpClient import *
 
@@ -33,21 +35,19 @@ class Group:
         self.msg_id = int(random.uniform(20000, 50000))
         self.member_list = []
         self.msg_list = []
-        self.follow_list = []
-        self.tucao_dict = {}
         self.global_config = DefaultConfigs()
         self.private_config = GroupConfig(self)
+        self.game_config = GameConfig().conf
+        self.game_helper = Game()
         self.update_config()
         self.process_order = [
-            "follow",
-            "repeat",
-            "callout",
-            "command_0arg",
-            "command_1arg",
-            "tucao",
+            "game_test",
+            "query_info",
+            "daily_sign_in",
+            "pet_practice",
+            "pet_level_up"
         ]
         logging.info(str(self.gid) + "群已激活, 当前执行顺序： " + str(self.process_order))
-        self.tucao_load()
 
     def update_config(self):
         self.private_config.update()
@@ -102,133 +102,138 @@ class Group:
                 logging.warning("Response Error over 5 times.Exit.reply content:" + str(reply_content))
                 return False
 
-    def command_0arg(self, msg):
-        # webqq接受的消息会以空格结尾
-        match = re.match(r'^(?:!|！)([^\s\{\}]+)\s*$', msg.content)
-        if match:
-            command = str(match.group(1))
-            logging.info("command format detected, command: " + command)
+    def format_long_number(self, num, digits = 3, split = " "):
+        ret_str = []
+        num = int(num)
+        base_num = 1
+        for i in range(0, digits): base_num = base_num * 10
+        while True:
+            remain_num = num % base_num
+            num = int(num / base_num)
+            if num == 0:
+                ret_str.append(str(remain_num))
+                break
+            else:
+                ret_str.append("%03d"%remain_num)
+        if ret_str:
+            ret_str.reverse()
+            return split.join(ret_str)
+        else:
+            return "0"
 
-            if command == "吐槽列表":
-                self.show_tucao_list()
-                return True
+    def get_user_qq(self, msg):
+        return (str(self.__operator.account), str(msg.group_code), str(self.__operator.uin_to_account(msg.send_uin)))
 
-        return False
-
-    def command_1arg(self, msg):
-        match = re.match(r'^(?:!|！)([^\s\{\}]+)(?:\s?)\{([^\s\{\}]+)\}\s*$', msg.content)
-        if match:
-            command = str(match.group(1))
-            arg1 = str(match.group(2))
-            logging.info("command format detected, command:{0}, arg1:{1}".format(command, arg1))
-            if command == "删除关键字" and unicode(arg1) in self.tucao_dict:
-                self.tucao_dict.pop(unicode(arg1))
-                self.reply("已删除关键字:{0}".format(arg1))
-                self.tucao_save()
-                return True
-
-        return False
-
-    def show_tucao_list(self):
-        result = ""
-        for key in self.tucao_dict:
-            result += "关键字：{0}      回复：{1}\n".format(key, " / ".join(self.tucao_dict[key]))
-        logging.info("Replying the list of tucao")
-        self.reply(result)
-
-    def callout(self, msg):
-        if "智障机器人" in msg.content:
-            logging.info(str(self.gid) + " calling me out, trying to reply....")
-            self.reply("干嘛（‘·д·）")
+    def game_test(self, msg):
+        if str(msg.content).lower().strip(' ') in ["test", "gametest", "game test"]:
+            self.reply("我是游戏我是游戏，玩我玩我！")
             return True
-        return False
-
-    def repeat(self, msg):
-        if len(self.msg_list) > 0 and self.msg_list[-1].content == msg.content:
-            if str(msg.content).strip() not in ("", " ", "[图片]", "[表情]"):
-                logging.info(str(self.gid) + " repeating, trying to reply " + str(msg.content))
-                self.reply(msg.content)
-                return True
-        return False
-
-    def tucao(self, msg):
-        match = re.match(r'^(?:!|！)(learn|delete)(?:\s?){(.+)}(?:\s?){(.+)}', msg.content)
-        if match:
-            logging.info("tucao command detected.")
-            command = str(match.group(1)).decode('utf8')
-            key = str(match.group(2)).decode('utf8')
-            value = str(match.group(3)).decode('utf8')
-            if command == 'learn':
-                if key in self.tucao_dict and value not in self.tucao_dict[key]:
-                    self.tucao_dict[key].append(value)
-                else:
-                    self.tucao_dict[key] = [value]
-                self.reply("学习成功！快对我说" + str(key) + "试试吧！")
-                self.tucao_save()
-                return True
-
-            elif command == 'delete':
-                if key in self.tucao_dict and self.tucao_dict[key].count(value):
-                    self.tucao_dict[key].remove(value)
-                    self.reply("呜呜呜我再也不说" + str(value) + "了")
-                    self.tucao_save()
-                    return True
         else:
-            for key in self.tucao_dict.keys():
-                if str(key) in msg.content and self.tucao_dict[key]:
-                    logging.info("tucao pattern detected, replying...")
-                    self.reply(random.choice(self.tucao_dict[key]))
-                    return True
-        return False
+            return False
 
-    def tucao_save(self):
-        try:
-            tucao_file_path = str(self.global_config.conf.get('global', 'tucao_path')) + str(self.gid) + ".tucao"
-            with open(tucao_file_path, "w+") as tucao_file:
-                cPickle.dump(self.tucao_dict, tucao_file)
-            logging.info("tucao saved. Now tucao list:  {0}".format(str(self.tucao_dict)))
-        except Exception:
-            logging.error("Fail to save tucao.")
-            raise IOError("Fail to save tucao.")
-
-    def tucao_load(self):
-        # try:
-        tucao_file_path = str(self.global_config.conf.get('global', 'tucao_path'))
-        tucao_file_name = tucao_file_path + str(self.gid) + ".tucao"
-        if not os.path.isdir(tucao_file_path):
-            os.makedirs(tucao_file_path)
-        if not os.path.exists(tucao_file_name):
-            with open(tucao_file_name, "w") as tmp:
-                tmp.close()
-        with open(tucao_file_name, "r") as tucao_file:
-            try:
-                self.tucao_dict = cPickle.load(tucao_file)
-                logging.info("tucao loaded. Now tucao list:  {0}".format(str(self.tucao_dict)))
-            except EOFError:
-                logging.info("tucao file is empty.")
-        # except Exception as er:
-        #     logging.error("Fail to load tucao:  ", er)
-        #     raise IOError("Fail to load tucao:  ", er)
-
-    def follow(self, msg):
-        match = re.match(r'^(?:!|！)(follow|unfollow) (\d+|me)', msg.content)
-        if match:
-            logging.info("following...")
-            command = str(match.group(1))
-            target = str(match.group(2))
-            if target == 'me':
-                target = str(self.__operator.uin_to_account(msg.send_uin))
-
-            if command == 'follow' and target not in self.follow_list:
-                self.follow_list.append(target)
-                self.reply("我开始关注" + target + "啦")
-                return True
-            elif command == 'unfollow' and target in self.follow_list:
-                self.follow_list.remove(target)
-                self.reply("我不关注" + target + "了")
-                return True
+    def query_info(self, msg):
+        msg_content = str(msg.content).strip(' ')
+        reply_msg = None
+        user_qq = self.get_user_qq(msg)
+        user_nick = self.__operator.get_friend_info(msg)['nick']
+        if msg_content == "我的宠物":
+            pet = self.game_helper.getPet(user_qq = user_qq)
+            if pet:
+                level_info = self.game_config.levels[pet.level]
+                reply_msg = "【{0}】的宠物\n宠物等级：{1}{2}\n当前体力：{3}\n目前积分：{4}".format(user_nick, level_info.grade, level_info.level, pet.power, self.format_long_number(pet.user.score))
+                if hasattr(level_info, 'benefits_description') and not level_info.benefits_description == "":
+                    reply_msg = reply_msg + '\n' + level_info.benefits_description
+            else:
+                reply_msg
+            self.reply(reply_msg)
+            return True
         else:
-            if str(self.__operator.uin_to_account(msg.send_uin)) in self.follow_list:
-                self.reply(msg.content)
-                return True
-        return False
+            return False
+
+    def daily_sign_in(self, msg):
+        msg_content = str(msg.content).strip(' ')
+        reply_msg = None
+        user_qq = self.get_user_qq(msg)
+        user_nick = self.__operator.get_friend_info(msg)['nick']
+        score_to_add = self.game_config.default.signin_score
+        if msg_content == "签到":
+            result = self.game_helper.dailySignin(user_qq = user_qq)
+            reply_msg = "【{0}】".format(user_nick)
+            if result == 0:
+                reply_msg += "签到成功！获得 {0} 积分，宠物体力值重设为 {1}。".format(self.format_long_number(score_to_add), self.game_config.default.power)
+            elif result == 2:
+                reply_msg += "签到失败！今天已经签到过了。"
+            elif result == 3:
+                reply_msg += "签到失败！积分余额不足。"
+            else:
+                reply_msg += "签到失败！发生系统错误，请联系管理员。"
+            self.reply(reply_msg)
+            return True
+        else:
+            return False
+
+    def pet_practice(self, msg):
+        msg_content = str(msg.content).strip(' ')
+        reply_msg = None
+        user_qq = self.get_user_qq(msg)
+        user_nick = self.__operator.get_friend_info(msg)['nick']
+        if msg_content == "宠物修炼":
+            pet = self.game_helper.getPet(user_qq = user_qq)
+            rules = self.game_config.levels[pet.level].practices
+            power_cost = self.game_config.default.power_cost_of_practice
+            result = self.game_helper.petPractice(pet)
+            reply_msg = "【{0}】的宠物".format(user_nick)
+            if isinstance(result, list):
+                reply_msg += "修炼完成！\n消耗{0}点体力值".format(power_cost)
+                has_hit = False
+                for i in range(0, len(rules)):
+                    score_gotten = result[i]
+                    rule_item = rules[i]
+                    if score_gotten != 0 and rule_item.score != 0:
+                        has_hit = True
+                        is_positive = "获得" if rule_item.score > 0 else "损失"
+                        if abs(rule_item.score) > 1: reply_msg += "\n{0}了 {1} 点积分".format(is_positive, self.format_long_number(score_gotten))
+                        else:
+                            if rule_item.condition == "lose":
+                                reply_msg += "\n{0}获得了已损失积分中的{1}%，即 {2} 点积分。".format(is_positive, int(rule_item.score * 100), self.format_long_number(score_gotten))
+                            else:
+                                reply_msg += "\n{0}了 {1} 点积分".format(is_positive, self.format_long_number(score_gotten))
+                if not has_hit: reply_msg += "\n什么也没得到"
+            elif result == 1:
+                reply_msg += "\n体力值不足，无法修炼。"
+            else:
+                reply_msg += "\n修炼失败，发生系统错误。"
+            self.reply(reply_msg)
+            return True
+        else:
+            return False
+
+    def pet_level_up(self, msg):
+        msg_content = str(msg.content).strip(' ')
+        reply_msg = None
+        user_qq = self.get_user_qq(msg)
+        user_nick = self.__operator.get_friend_info(msg)['nick']
+        if msg_content == "宠物升级":
+            pet = self.game_helper.getPet(user_qq = user_qq)
+            to_level = pet.level + 1
+            score_cost = self.game_config.levels[to_level].score
+            result = self.game_helper.petLevelUp(pet)
+            reply_msg = "【{0}】的宠物".format(user_nick)
+            if result == 0:
+                to_level = self.game_config.levels[to_level]
+                reply_msg += "升至{0}{1}，消耗了 {2} 积分".format(to_level.grade, to_level.level, self.format_long_number(score_cost))
+            elif result == 1:
+                reply_msg += "无法升级，积分不够了"
+            elif result == 2:
+                reply_msg += "已经是满级了哦"
+            else:
+                reply_msg += "升级失败，发生系统错误"
+            self.reply(reply_msg)
+            return True
+        else:
+            return False
+
+
+
+
+

@@ -10,6 +10,8 @@ import re
 import json
 import logging
 
+import sys, os
+
 from Configs import *
 from Msg import *
 from Notify import *
@@ -48,6 +50,7 @@ class QQ:
         self.req = HttpClient()
 
         self.friend_list = {}
+        self.friend_infos = {}
 
         self.client_id = int(random.uniform(111111, 888888))
         self.ptwebqq = ''
@@ -78,6 +81,7 @@ class QQ:
             error_times += 1
             self.req.Download('https://ssl.ptlogin2.qq.com/ptqrshow?appid={0}&e=0&l=L&s=8&d=72&v=4'.format(appid),
                               self.qrcode_path)
+            if len(sys.argv) > 1 and sys.argv[1] == "-d": os.system("open %s" % self.qrcode_path)
             logging.info("Please scan the downloaded QRCode")
 
             while True:
@@ -280,3 +284,28 @@ class QQ:
         except KeyError, e:
             logging.warning(e)
             logging.debug("now uin list:    " + str(self.friend_list))
+
+    # 查询详细信息
+    def get_friend_info(self, msg):
+        assert isinstance(msg, (Msg, Notify)), "function get_account received a not Msg or Notify parameter."
+        tuin = ""
+        if isinstance(msg, (PmMsg, SessMsg, InputNotify)):
+            tuin = str(msg.from_uin)
+        elif isinstance(msg, GroupMsg):
+            tuin = str(msg.send_uin)
+        if not tuin in self.friend_infos:
+            self.friend_infos[tuin] = self.uin_to_info(tuin)
+        return self.friend_infos[tuin]
+    def uin_to_info(self, tuin):
+        try:
+            logging.info("Requesting the info by uin:    " + str(tuin))
+            url = "http://s.web2.qq.com/api/get_friend_info2?tuin={0}&vfwebqq={1}&clientid={2}&psessionid={3}&t={4}".format(str(tuin), self.vfwebqq, self.client_id, self.psessionid, int(time.time()*1000))
+            fetch_response = self.req.Get(url, self.default_config.conf.get("global", "connect_referer"))
+            info = json.loads(fetch_response)
+            info = info['result']
+            return info
+        except BaseException, error:
+            print "error"
+            print error
+            logging.warning(error)
+
