@@ -49,8 +49,9 @@ class QQ:
         self.default_config = DefaultConfigs()
         self.req = HttpClient()
 
-        self.friend_list = {}
-        self.friend_infos = {}
+        self.init_info_lists()
+        self.last_refresh = time.time()
+        self.refresh_interval = int(self.default_config.conf.get("global", "refresh_interval"))
 
         self.client_id = int(random.uniform(111111, 888888))
         self.ptwebqq = ''
@@ -247,8 +248,20 @@ class QQ:
             time.sleep(1)
             return self.check_msg(error_times + 1)
 
+    def init_info_lists(self):
+        self.friend_list = {}
+        self.friend_infos = {}
+        self.group_infos = {}
+
+    def check_refresh(self):
+        now_time = time.time()
+        if now_time - self.refresh_interval > self.last_refresh:
+            self.last_refresh = now_time
+            self.init_info_lists()
+
     # 查询QQ号，通常首次用时0.2s，以后基本不耗时
     def get_account(self, msg):
+        self.check_refresh()
         assert isinstance(msg, (Msg, Notify)), "function get_account received a not Msg or Notify parameter."
 
         if isinstance(msg, (PmMsg, SessMsg, InputNotify)):
@@ -261,6 +274,7 @@ class QQ:
             return str(msg.info_seq).join("[]") + str(self.uin_to_account(msg.send_uin))
 
     def uin_to_account(self, tuin):
+        self.check_refresh()
         uin_str = str(tuin)
         if uin_str not in self.friend_list:
             try:
@@ -287,25 +301,59 @@ class QQ:
 
     # 查询详细信息
     def get_friend_info(self, msg):
-        assert isinstance(msg, (Msg, Notify)), "function get_account received a not Msg or Notify parameter."
+        self.check_refresh()
+        # assert isinstance(msg, (Msg, Notify)), "function get_account received a not Msg or Notify parameter."
+        assert isinstance(msg, (PmMsg, GroupMsg)), "function get_friend_info received a not PmMsg or GroupMsg parameter"
         tuin = ""
-        if isinstance(msg, (PmMsg, SessMsg, InputNotify)):
+        # if isinstance(msg, (PmMsg, SessMsg, InputNotify)):
+        if isinstance(msg, (PmMsg)):
             tuin = str(msg.from_uin)
+            if not tuin in self.friend_infos:
+                try:
+                    logging.info("Requesting the info by uin:    " + str(tuin))
+                    url = "http://s.web2.qq.com/api/get_friend_info2?tuin={0}&vfwebqq={1}&clientid={2}&psessionid={3}&t={4}".format(str(tuin), self.vfwebqq, self.client_id, self.psessionid, int(time.time()*1000))
+                    fetch_response = self.req.Get(url, self.default_config.conf.get("global", "connect_referer"))
+                    info = json.loads(fetch_response)
+                    info = info['result']
+                    self.friend_infos[tuin] = info
+                except BaseException, error:
+                    logging.warning(error)
         elif isinstance(msg, GroupMsg):
             tuin = str(msg.send_uin)
-        if not tuin in self.friend_infos:
-            self.friend_infos[tuin] = self.uin_to_info(tuin)
-        return self.friend_infos[tuin]
-    def uin_to_info(self, tuin):
+            gcode = str(msg.group_code)
+            if not tuin in self.friend_infos: self.request_group_info_ext(gcode)
+        if tuin in self.friend_infos: return self.friend_infos[tuin]
+        else: return None
+    
+    # 查询群信息
+    def get_group_info(self, msg):
+        self.check_refresh()
+        assert isinstance(msg, GroupMsg), "function get_group_info received a not GroupMsg parameter"
+        gcode = str(msg.group_code)
+        if not gcode in self.group_infos: self.request_group_info_ext(gcode)
+        if gcode in self.group_infos: return self.group_infos[gcode]
+        else: return None
+
+    def request_group_info_ext(self, gcode):
         try:
-            logging.info("Requesting the info by uin:    " + str(tuin))
-            url = "http://s.web2.qq.com/api/get_friend_info2?tuin={0}&vfwebqq={1}&clientid={2}&psessionid={3}&t={4}".format(str(tuin), self.vfwebqq, self.client_id, self.psessionid, int(time.time()*1000))
+            logging.info("Requesting the info by group_code:    " + str(gcode))
+            url = "http://s.web2.qq.com/api/get_group_info_ext2?gcode={0}&vfwebqq={1}&t={2}".format(gcode, self.vfwebqq, int(time.time()*1000))
             fetch_response = self.req.Get(url, self.default_config.conf.get("global", "connect_referer"))
-            info = json.loads(fetch_response)
-            info = info['result']
-            return info
+            info_list = json.loads(fetch_response)
+            info_list = info_list['result']
+            finfo_list = info_list['minfo']
+            for info in finfo_list:
+                self.friend_infos[str(info['uin'])] = info
+            ginfo = info_list['ginfo']
+            createtime = ginfo['createtime']
+            owner = ginfo['owner']
+            owner = self.uin_to_account(owner)
+            gnid = "{0}_{1}".format(owner, createtime)
+            ginfo['nid'] = gnid
+            self.group_infos[gcode] = ginfo
         except BaseException, error:
             print "error"
             print error
             logging.warning(error)
+        
 

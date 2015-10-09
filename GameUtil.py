@@ -65,6 +65,16 @@ class Game:
         else:
             return datetime.datetime.fromtimestamp(timestamp/1000)
 
+    def getItemFromListByProperty(self, arr, prop, val):
+        assert isinstance(arr, list), "arr must be a list"
+        for item in arr:
+            if hasattr(item, prop) and getattr(item, prop) == val: return item
+        return None
+    def getCharge(face):
+        return getItemFromListByProperty(self.game_config.charges, 'face', face)
+    def getCard(face):
+        return getItemFromListByProperty(self.game_config.cards, 'face', face)
+
     def is_valid_user_qq(self, user_qq):
         return (not user_qq is None) and isinstance(user_qq, tuple) and (len(user_qq) == 3)
 
@@ -109,15 +119,15 @@ class Game:
         if not self.long_connect: self.connect()
         user = None
         if not user_id is None:
-            if self.cur.execute('SELECT id, admin_qq, group_code, qq, score FROM user WHERE id = {0}'.format(user_id)):
+            if self.cur.execute('SELECT id, admin_qq, group_nid, qq, score FROM user WHERE id = {0}'.format(user_id)):
                 item = self.cur.fetchone()
-                user = GameUser(_id = item[0], admin_qq = item[1], group_code = item[2], qq = item[3], score = item[4])
+                user = GameUser(_id = item[0], admin_qq = item[1], group_nid = item[2], qq = item[3], score = item[4])
         elif self.is_valid_user_qq(user_qq):
-            if self.cur.execute('SELECT id, admin_qq, group_code, qq, score FROM user WHERE admin_qq = "{0}" AND group_code = "{1}" AND qq = "{2}"'.format(user_qq[0], user_qq[1], user_qq[2])):
+            if self.cur.execute('SELECT id, admin_qq, group_nid, qq, score FROM user WHERE admin_qq = "{0}" AND group_nid = "{1}" AND qq = "{2}"'.format(user_qq[0], user_qq[1], user_qq[2])):
                 item = self.cur.fetchone()
-                user = GameUser(_id = item[0], admin_qq = item[1], group_code = item[2], qq = item[3], score = item[4])
+                user = GameUser(_id = item[0], admin_qq = item[1], group_nid = item[2], qq = item[3], score = item[4])
             else:
-                if self.cur.execute('INSERT INTO user (admin_qq, group_code, qq, score) VALUES ("{0}", "{1}", "{2}", {3})'.format(user_qq[0], user_qq[1], user_qq[2], self.game_config.default.score)) and not no_insert:
+                if self.cur.execute('INSERT INTO user (admin_qq, group_nid, qq, score) VALUES ("{0}", "{1}", "{2}", {3})'.format(user_qq[0], user_qq[1], user_qq[2], self.game_config.default.score)) and not no_insert:
                     user = self.getUser(user_qq = user_qq, no_insert = True)
         if not self.long_connect: self.close(True)
         return user
@@ -229,18 +239,18 @@ class Game:
     def dailySignin(self, user_id = None, user_qq = None):
         """
         0: success
-        1: system error
         2: already have
         3: score negative
+        100: system error
         """
         if not self.long_connect: self.connect()
         pet = self.getPet(user_id = user_id, user_qq = user_qq)
         if not pet: 
             if not self.long_connect: self.close(False)
-            return 1
+            return 100
         if not self.setPetPower(self.game_config.default.power, pet.id):
             if not self.long_connect: self.close(False)
-            return 1
+            return 100
         user = pet.user
         now_timestamp = self.timestamp()
         if self.cur.execute("SELECT time FROM sign_in ORDER BY time DESC LIMIT 1"):
@@ -254,25 +264,25 @@ class Game:
             if not self.long_connect: self.close()
             return 3
         if self.cur.execute("INSERT INTO sign_in (user_id, earning, time) VALUES ({0}, {1}, {2})".format(user.id, score_to_add, now_timestamp)):
-            if self.cur.execute("SELECT id FROM sign_in ORDER BY time DESC LIMIT 1"):
+            if self.cur.execute("SELECT id FROM sign_in WHERE user_id = {0} AND time = {1}".format(user.id, now_timestamp)):
                 signin_record = self.cur.fetchone()
                 signin_id = signin_record[0]
                 if not self.pay(user.id, 'sign_in', signin_id, now_timestamp):
                     if not self.long_connect: self.close(False)
-                    return 1
+                    return 100
             else:
                 if not self.long_connect: self.close(False)
-                return 1
+                return 100
         else:
             if not self.long_connect: self.close(False)
-            return 1
+            return 100
         if not self.long_connect: self.close(True)
         return 0
 
     def petPractice(self, pet):
         """
         1: insufficient pet power
-        2: system error
+        100: system error
         list: pay amount for each rule
         """
         if not isinstance(pet, GamePet):
@@ -283,7 +293,7 @@ class Game:
         total_add_score = 0
         if not self.addPetPower(-self.game_config.default.power_cost_of_practice, pet.id):
             if not self.long_connect: self.close(False)
-            return 1
+            return 100
         for rule in practice_rules:
             add_score = 0
             if self.random_judge(rule.rate):
@@ -299,7 +309,7 @@ class Game:
         if total_add_score != 0:
             pay_time = self.timestamp()
             if self.cur.execute("INSERT INTO practice (pet_id, earning, time) VALUES ({0}, {1}, {2})".format(pet.id, total_add_score, pay_time)):
-                if self.cur.execute("SELECT id FROM practice WHERE pet_id = {0} ORDER BY time DESC LIMIT 1".format(pet.id)) and self.pay(pet.user.id, "practice", self.cur.fetchone().id, pay_time):
+                if self.cur.execute("SELECT id FROM practice WHERE pet_id = {0} AND time = {1}".format(pet.id, pay_time)) and self.pay(pet.user.id, "practice", self.cur.fetchone().id, pay_time):
                     pass
                 else:
                     if not self.long_connect: self.close(False)
@@ -315,10 +325,10 @@ class Game:
         0: success
         1: insufficient score
         2: highest level
-        3: system error
+        100: system error
         """
         if not isinstance(pet, GamePet):
-            return 3
+            return 100
         if not pet.level + 1 < len(self.game_config.levels):
             return 2
         if not self.long_connect: self.connect()
@@ -327,36 +337,115 @@ class Game:
         pay_time = self.timestamp()
         if not self.cur.execute("INSERT INTO level_up (pet_id, from_level, to_level, earning, time) VALUES ({0}, {1}, {2}, {3}, {4})".format(pet.id, pet.level, to_level, -score_cost, pay_time)):
             if not self.long_connect: self.close(False)
-            return 3
-        if self.cur.execute("SELECT id FROM level_up ORDER BY time DESC LIMIT 1"):
+            return 100
+        if self.cur.execute("SELECT id FROM level_up WHERE pet_id = {0} AND time = {1}".format(pet.id, pay_time)):
             if not self.pay(pet.user.id, 'level_up', self.cur.fetchone()[0], pay_time):
                 if not self.long_connect: self.close(False)
                 return 1
         else:
             if not self.long_connect: self.close(False)
-            return 3
+            return 100
         if not self.cur.execute("UPDATE pet SET level = {0} WHERE id = {1}".format(to_level, pet.id)):
             if not self.long_connect: self.close(False)
-            return 3
+            return 100
         if not self.long_connect: self.close(True)
         return 0
 
-    def petWork(self, pet):
+    def petWorkStart(self, pet):
+        """
+        0: success
+        1: in work
+        2: no ability
+        100: system error
+        """
+        if not isinstance(pet, GamePet):
+            return 100
+        score_earn = self.game_config.levels[pet.level].earning
+        if score_earn <= 0:
+            return 2
+        if not self.long_connect: self.connect()
+        now_timestamp = self.timestamp()
+        work_interval = self.game_config.default.work_interval * 1000
+        if self.cur.execute("SELECT id FROM work WHERE pet_id = {0} AND time_end = 0 ORDER BY time_start DESC LIMIT 1".format(pet.id)):
+            if not self.long_connect: self.close(False)
+            return 1
+        if not self.cur.execute("INSERT INTO work (pet_id, time_start, time_end, earning) VALUES ({0}, {1}, {2}, {3})".format(pet.id, now_timestamp, 0, score_earn)):
+            if not self.long_connect: self.close(False)
+            return 100
+        if not self.long_connect: self.close(True)
+        return 0
+
+    def petWorkEnd(self, pet):
+        """
+        0: success
+        1: not in work
+        2: time not satisfied
+        2: pay failed
+        100: system error
+        """
         if not isinstance(pet, GamePet):
             return 3
-        score_earn = self.game_config.levels[pet.level]
+        if not self.long_connect: self.connect()
+        now_timestamp = self.timestamp()
+        work_interval = self.game_config.default.work_interval * 1000
+        if self.cur.execute("SELECT id, time_start FROM work WHERE pet_id = {0} AND time_end = 0 ORDER BY time_start DESC LIMIT 1".format(pet.id)):
+            record = self.cur.fetchone()
+            record_id = record[0]
+            record_time_start = record[1]
+            if record_time_start > now_timestamp - work_interval:
+                if not self.long_connect: self.close(False)
+                return 2
+            if not self.cur.execute("UPDATE work SET time_end = {0} WHERE id = {1}".format(now_timestamp, record_id)):
+                if not self.long_connect: self.close(False)
+                return 100
+            if not self.pay(pet.user.id, 'work', record_id, now_timestamp):
+                if not self.long_connect: self.close(False)
+                return 3
+        else:
+            if not self.long_connect: self.close(False)
+            return 1
+        if not self.long_connect: self.close(True)
+        return 0
+
+    def adminCharge(self, face, user_id = None, user_qq = None, administrator_id = None, administrator_qq = None):
+        """
+        0: success
+        1: face not valid
+        2: user not exist
+        100: system error
+        """
+        charge_item = self.getCharge(face)
+        if not charge_item:
+            return 1
+        if not self.long_connect: self.connect()
+        user = self.getUser(user_id, user_qq, no_insert = True)
+        administrator = self.getUser(administrator_id, administrator_qq)
+        if not user: 
+            if not self.long_connect: self.close(False)
+            return 2
+        if not administrator:
+            if not self.long_connect: self.close(False)
+            return 100
+        now_timestamp = self.timestamp()
+        if not self.cur.execute('INSERT INTO charge (user_id, administrator_id, face, earning, time) VALUES ({0}, {1}, "{2}", {3}, {4})').format(user.id, administrator.id, face, charge_item.score, now_timestamp) \
+                or not self.cur.execute('SELECT id FROM charge WHERE user_id = {0} AND administrator_id = {1} AND time = {2}'.format(user.id, administrator.id, now_timestamp)) \
+                or not self.pay(user.id, 'charge', self.cur.fetchone()[0], now_timestamp):
+            if not self.long_connect: self.close(False)
+            return 100
+        if not self.long_connect: self.close(True)
+        return 0
 
 class GameUser:
     def __init__(self,
             _id = -1,
             qq = "",
             admin_qq = "",
-            group_code = "",
+            group_nid = "",
             score = 0):
         self.id = _id
         self.qq = qq
         self.admin_qq = admin_qq
-        self.group_code = group_code
+        self.group_nid = group_nid
         self.score = score
 
 class GamePet:

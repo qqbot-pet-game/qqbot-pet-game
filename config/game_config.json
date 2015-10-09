@@ -10,8 +10,10 @@
         "score": 0,
         "power": 100,
         "signin_score": 50000,
-        "work_interval": 3600,
-        "power_cost_of_practice": 10
+        "work_interval": 10,
+        "power_cost_of_practice": 10,
+        "admin_qq": ["597789699"],
+        "error_msg": "系统发生错误，请重试或联系管理员"
     },
     "levels": [
         {
@@ -521,6 +523,36 @@
                 }
             ],
             "benefits_description": "有百分之百几率获得以损失百分之五的游戏分   百分之三十几率获得十亿积分"
+        }
+    ],
+    "charges": [
+        {
+            "face": "10元",
+            "score": 5000000
+        }, {
+            "face": "20元",
+            "score": 20000000
+        }, {
+            "face": "50元",
+            "score": 70000000
+        }, {
+            "face": "100元",
+            "score": 200000000
+        }
+    ],
+    "cards": [
+        {
+            "face": "月卡",
+            "time": 30,
+            "score": 2000000
+        }, {
+            "face": "大月卡",
+            "time": 30,
+            "score": 6000000
+        }, {
+            "face": "超级月卡",
+            "time": 30,
+            "score": 10000000
         }
     ]
 }
