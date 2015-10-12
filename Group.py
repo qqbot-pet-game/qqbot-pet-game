@@ -13,6 +13,7 @@ from Msg import *
 from HttpClient import *
 
 import re
+import datetime, time
 
 logging.basicConfig(
     filename='smartqq.log',
@@ -50,6 +51,7 @@ class Group:
             "pet_practice",
             "pet_level_up",
             "pet_work",
+            "gamble_ggl",
             "admin"
         ]
         logging.info(str(self.gid) + "群已激活, 当前执行顺序： " + str(self.process_order))
@@ -174,12 +176,9 @@ class Group:
 
     def game_test(self, msg):
         if str(msg.content).lower().strip(' ') in ["test", "gametest", "game test"]:
-            print "test"
             self.reply("我是游戏我是游戏，玩我玩我！")
-            print "test end"
             return True
         else:
-            print "not test"
             return False
 
     def query_info(self, msg):
@@ -188,8 +187,6 @@ class Group:
         user_qq = self.get_user_qq(msg)
         user_nick = self.get_user_nick(msg)
         if msg_content == "我的宠物":
-            print "query"
-            return True
             if (user_qq is None) or (user_nick is None):
                 self.reply(self.error_msg)
                 return True
@@ -202,7 +199,7 @@ class Group:
                     pet.power, 
                     self.format_long_number(pet.user.score))
                 if hasattr(level_info, 'earning') and not level_info.earning == 0:
-                    reply_msg = reply_msg + "\n每打工{0}可得 {1} 分工资".format(self.format_time_period(self.game_config.default.work_interval), 
+                    reply_msg = reply_msg + "\n每打工{0}可得 {1} 分工资".format(self.format_time_period(self.game_config.default.work_interval*1000), 
                         self.format_long_number(self.game_config.levels[pet.level].earning))
                 if hasattr(level_info, 'benefits_description') and not level_info.benefits_description == "":
                     reply_msg = reply_msg + '\n' + level_info.benefits_description
@@ -210,8 +207,18 @@ class Group:
                 reply_msg = self.error_msg
             self.reply(reply_msg)
             return True
+        elif msg_content == "我的积分":
+            if (user_qq is None) or (user_nick is None):
+                self.reply(self.error_msg)
+                return True
+            user = self.game_helper.getUser(user_qq = user_qq)
+            if user:
+                reply_msg = "【{0}】目前积分：{1}".format(user_nick, self.format_long_number(user.score))
+            else:
+                reply_msg = self.error_msg
+            self.reply(reply_msg)
+            return True
         else:
-            print "not query"
             return False
 
     def daily_sign_in(self, msg):
@@ -220,18 +227,25 @@ class Group:
         user_qq = self.get_user_qq(msg)
         user_nick = self.get_user_nick(msg)
         score_to_add = self.game_config.default.signin_score
-        if msg_content == "签到":
+        match = re.compile('({0})?签到'.format('|'.join([item.face for item in self.game_config.monthcards]))).match(msg_content)
+        if match:
+            monthcard_face = match.group(1)
+            monthcard_item = self.game_helper.getMonthcard(monthcard_face)
+            if monthcard_item: score_to_add = monthcard_item.score
             if (user_qq is None) or (user_nick is None):
                 self.reply(self.error_msg)
                 return True
-            result = self.game_helper.dailySignin(user_qq = user_qq)
+            result = self.game_helper.dailySignin(user_qq = user_qq, monthcard_face = monthcard_face)
             reply_msg = "【{0}】".format(user_nick)
             if result == 0:
+                if monthcard_face: reply_msg += "使用" + monthcard_face
                 reply_msg += "签到成功！获得 {0} 积分，宠物体力值重设为 {1}。".format(self.format_long_number(score_to_add), self.game_config.default.power)
             elif result == 2:
                 reply_msg += "签到失败！今天已经签到过了。"
             elif result == 3:
                 reply_msg += "签到失败！积分余额不足。"
+            elif result == 5:
+                reply_msg += "还没有办理{0}或{0}已过期！".format(monthcard_face)
             else:
                 reply_msg += "签到失败！发生系统错误，请联系管理员。"
             self.reply(reply_msg)
@@ -351,14 +365,34 @@ class Group:
         else:
             return False
 
+    def gamble_ggl(self, msg):
+        msg_content = str(msg.content).strip(' ')
+        reply_msg = None
+        user_qq = self.get_user_qq(msg)
+        user_nick = self.get_user_nick(msg)
+        if msg_content == "刮刮乐":
+            if (user_qq is None) or (user_nick is None):
+                self.reply(self.error_msg)
+                return True
+            result = self.game_helper.gambleGgl(user_qq = user_qq)
+            game_config = self.game_config.gambles.ggl
+            reply_msg = "【{0}】".format(user_nick)
+            if result >= 0 and result < len(game_config.prizes):
+                prize_item = game_config.prizes[result]
+                reply_msg += "花了 {0} 分参与幸运刮刮乐，获得{1}, 赢得了 {2} 分！".format(self.format_long_number(game_config.cost), prize_item.name, self.format_long_number(prize_item.score))
+            elif result == -1:
+                reply_msg += "没有足够的积分参与幸运刮刮乐"
+            else:
+                reply_msg += "参与刮刮乐失败，发生系统错误"
+            self.reply(reply_msg)
+            return True
+        else:
+            return False
+
     def admin(self, msg):
         msg_content = str(msg.content).strip(' ')
         reply_msg = None
         reg_exp = '(\d+)(充值|办理)(.+)'
-        # if isinstance(msg_content, unicode): reg_exp = reg_exp.decode('utf-8')
-        # elif not isinstance(msg_content, str):
-        #     self.reply(self.error_msg)
-        #     return True
         match = re.compile(reg_exp).match(msg_content)
         if match is None: return False
         administrator_qq = self.get_user_qq(msg)
@@ -370,14 +404,26 @@ class Group:
             return True
         if match.group(2) == "充值":
             face = match.group(3)
-            result = self.game_helper.adminCharge(face)
-            score_gotten = self.game_helper.getCharge(face)
+            result = self.game_helper.adminCharge(face, user_qq = user_qq, administrator_qq = administrator_qq)
+            score_gotten = self.game_helper.getCharge(face).score
             if result == 0:
-                reply_msg = "【{0}】成功充值{1}，获得 {2} 积分".format(user_qq[2], face, score_gotten)
+                reply_msg = "【{0}】成功充值{1}，获得 {2} 积分".format(user_qq[2], face, self.format_long_number(score_gotten))
             elif result == 1:
                 reply_msg = "【{0}】充值失败，充值金额不合法。可充值的金额有：{1}".format(user_qq[2], "、".join(item.face for item in self.game_config.charges))
             elif result == 2:
-                reply_msg = "充值失败，【{0}】尚未在本群注册"
+                reply_msg = "充值失败，【{0}】尚未在本群注册".format(user_qq[2])
+            else:
+                reply_msg = "充值失败，发生系统错误。"
+            self.reply(reply_msg)
+            return True
+        elif match.group(2) == "办理":
+            face = match.group(3)
+            result = self.game_helper.adminChargeMonthcard(face, user_qq = user_qq, administrator_qq = administrator_qq)
+            monthcard_item = self.game_helper.getMonthcard(face)
+            if isinstance(result, datetime.date):
+                reply_msg = "【{0}】成功办理{1}，{1}有效期至{2}".format(user_qq[2], face, (result + datetime.timedelta(-1)).strftime("%Y年%m月%d日"))
+            elif result == 2:
+                reply_msg = "办理失败，【{0}】尚未在本群注册".format(user_qq[2])
             else:
                 reply_msg = "充值失败，发生系统错误。"
             self.reply(reply_msg)

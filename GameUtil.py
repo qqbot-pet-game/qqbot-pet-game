@@ -1,7 +1,7 @@
 from GameConfigs import *
 
 import MySQLdb
-import time, datetime
+import time, datetime, moment
 import random
 
 class Game:
@@ -57,8 +57,11 @@ class Game:
         else:
             return False
 
-    def timestamp(self):
-        return int(time.time() * 1000)
+    def timestamp(self, dt = None):
+        if dt is None:
+            return int(time.time() * 1000)
+        else:
+            return int(time.mktime((dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second, 0, 0, 0)) * 1000)
     def datetime(self, timestamp = None):
         if timestamp is None:
             return datetime.datetime.now()
@@ -70,10 +73,10 @@ class Game:
         for item in arr:
             if hasattr(item, prop) and getattr(item, prop) == val: return item
         return None
-    def getCharge(face):
-        return getItemFromListByProperty(self.game_config.charges, 'face', face)
-    def getCard(face):
-        return getItemFromListByProperty(self.game_config.cards, 'face', face)
+    def getCharge(self, face):
+        return self.getItemFromListByProperty(self.game_config.charges, 'face', face)
+    def getMonthcard(self, face):
+        return self.getItemFromListByProperty(self.game_config.monthcards, 'face', face)
 
     def is_valid_user_qq(self, user_qq):
         return (not user_qq is None) and isinstance(user_qq, tuple) and (len(user_qq) == 3)
@@ -91,13 +94,15 @@ class Game:
             total_rate = 0
             rate_sum = 0
             rand = random.random()
-            if rand == 0: return 0
-            elif rand == 1: return len(rates) - 1
+            # if rand == 0: return 0
+            # elif rand == 1: return len(rates) - 1
             for r in rates: total_rate += r
+            total_rate = float(total_rate)
             for r in rates:
                 if r == total_rate: break
                 rate_sum += r / total_rate
                 if rand < rate_sum: break
+                elif (rate_sum == 1) and (rand == 1): break
                 idx += 1
             return idx
         elif isinstance(rates, dict):
@@ -106,13 +111,14 @@ class Game:
             total_rate = 0
             rate_sum = 0
             rand = random.random()
-            if rand == 0: return key_list[0]
-            elif rand == 1: return key_list[-1]
+            # if rand == 0: return key_list[0]
+            # elif rand == 1: return key_list[-1]
             for k,r in rates.iteritem(): total_rate += r
             for k,r in rates.iteritem():
                 if r == total_rate: return k
                 rate_sum += r / total_rate
                 if rand < rate_sum: return k
+                elif (rate_sum == 1) and (rand == 1): return k
             return None
 
     def getUser(self, user_id = None, user_qq = None, no_insert = False):
@@ -214,20 +220,29 @@ class Game:
         if not self.long_connect: self.close(True)
         return True
 
-    def pay(self, user_id, pay_type, pay_id, pay_time = None):
+    def pay(self, user_id, pay_type, pay_id, pay_score = 'earning', pay_time = 'time'):
         if not self.long_connect: self.connect()
-        if self.cur.execute("SELECT earning FROM {0} WHERE id = {1}".format(pay_type, pay_id)):
+        payment_earning = None
+        payment_time = None
+        select_fields = []
+        if isinstance(pay_score, str): select_fields.append(pay_score)
+        elif isinstance(pay_score, int): payment_earning = pay_score
+        if isinstance(pay_time, str): select_fields.append(pay_time)
+        elif isinstance(pay_time, int): payment_time = pay_time
+        if select_fields and self.cur.execute("SELECT {0} FROM {1} WHERE id = {2}".format(",".join(select_fields), pay_type, pay_id)):
             payment_record = self.cur.fetchone()
-            payment_earning = payment_record[0]
-            if payment_earning is None:
-                if not self.long_connect: self.close(False)
-                return False
-            if not isinstance(pay_time, int): pay_time = self.timestamp()
-            if self.cur.execute('INSERT INTO payment (user_id, ex_type, ex_id, value, time) VALUES ({0}, "{1}", {2}, {3}, {4})'.format(user_id, pay_type, pay_id, payment_earning, pay_time)):
-                if not self.addUserScore(payment_earning, user_id):
-                    if not self.long_connect: self.close(False)
-                    return False
-            else:
+            if isinstance(pay_score, str): 
+                payment_earning = payment_record[0]
+                if isinstance(pay_time, str):
+                    payment_time = payment_record[1]
+            elif isinstance(pay_time, str):
+                payment_time = payment_record[0]
+        if (payment_earning is None) or (payment_time is None):
+            if not self.long_connect: self.close(False)
+            return False
+        if not isinstance(payment_time, int): payment_time = self.timestamp()
+        if self.cur.execute('INSERT INTO payment (user_id, ex_type, ex_id, value, time) VALUES ({0}, "{1}", {2}, {3}, {4})'.format(user_id, pay_type, pay_id, payment_earning, payment_time)):
+            if not self.addUserScore(payment_earning, user_id):
                 if not self.long_connect: self.close(False)
                 return False
         else:
@@ -236,13 +251,18 @@ class Game:
         if not self.long_connect: self.close(True)
         return True
 
-    def dailySignin(self, user_id = None, user_qq = None):
+    def dailySignin(self, user_id = None, user_qq = None, monthcard_face = None):
         """
         0: success
         2: already have
         3: score negative
+        4: monthcard face not valid
+        5: no monthcard registered / monthcard overdue
         100: system error
         """
+        monthcard_item = self.getMonthcard(monthcard_face)
+        if not monthcard_item and not monthcard_face:
+            return 4
         if not self.long_connect: self.connect()
         pet = self.getPet(user_id = user_id, user_qq = user_qq)
         if not pet: 
@@ -253,21 +273,29 @@ class Game:
             return 100
         user = pet.user
         now_timestamp = self.timestamp()
-        if self.cur.execute("SELECT time FROM sign_in ORDER BY time DESC LIMIT 1"):
+        monthcard_id = None
+        score_to_add = self.game_config.default.signin_score
+        if user.score + score_to_add < 0:
+            if not self.long_connect: self.close()
+            return 3
+        if self.cur.execute("SELECT time FROM sign_in WHERE user_id = {0} ORDER BY time DESC LIMIT 1".format(user.id)):
             signin_record = self.cur.fetchone()
             last_signin_time = signin_record[0]
             if self.datetime(last_signin_time).date() == self.datetime(now_timestamp).date():
                 if not self.long_connect: self.close(False)
                 return 2
-        score_to_add = self.game_config.default.signin_score
-        if user.score + score_to_add < 0:
-            if not self.long_connect: self.close()
-            return 3
-        if self.cur.execute("INSERT INTO sign_in (user_id, earning, time) VALUES ({0}, {1}, {2})".format(user.id, score_to_add, now_timestamp)):
+        if monthcard_item:
+            if self.cur.execute('SELECT id FROM monthcard WHERE user_id = {0} AND face = "{1}" AND time_start <= {2} AND time_end > {2} ORDER BY time_end ASC LIMIT 1'.format(user.id, monthcard_item.face, now_timestamp)):
+                monthcard_id = self.cur.fetchone()[0]
+                score_to_add = monthcard_item.score
+            else:
+                if not self.long_connect: self.close(False)
+                return 5
+        if self.cur.execute("INSERT INTO sign_in (user_id, monthcard, earning, time) VALUES ({0}, {1}, {2}, {3})".format(user.id, 'NULL' if monthcard_id is None else monthcard_id, score_to_add, now_timestamp)):
             if self.cur.execute("SELECT id FROM sign_in WHERE user_id = {0} AND time = {1}".format(user.id, now_timestamp)):
                 signin_record = self.cur.fetchone()
                 signin_id = signin_record[0]
-                if not self.pay(user.id, 'sign_in', signin_id, now_timestamp):
+                if not self.pay(user.id, 'sign_in', signin_id, 'earning', 'time'):
                     if not self.long_connect: self.close(False)
                     return 100
             else:
@@ -309,7 +337,8 @@ class Game:
         if total_add_score != 0:
             pay_time = self.timestamp()
             if self.cur.execute("INSERT INTO practice (pet_id, earning, time) VALUES ({0}, {1}, {2})".format(pet.id, total_add_score, pay_time)):
-                if self.cur.execute("SELECT id FROM practice WHERE pet_id = {0} AND time = {1}".format(pet.id, pay_time)) and self.pay(pet.user.id, "practice", self.cur.fetchone().id, pay_time):
+                if self.cur.execute("SELECT id FROM practice WHERE pet_id = {0} AND time = {1}".format(pet.id, pay_time)) \
+                        and self.pay(pet.user.id, "practice", self.cur.fetchone().id, 'earning', 'time'):
                     pass
                 else:
                     if not self.long_connect: self.close(False)
@@ -335,11 +364,11 @@ class Game:
         to_level = pet.level + 1
         score_cost = self.game_config.levels[to_level].score
         pay_time = self.timestamp()
-        if not self.cur.execute("INSERT INTO level_up (pet_id, from_level, to_level, earning, time) VALUES ({0}, {1}, {2}, {3}, {4})".format(pet.id, pet.level, to_level, -score_cost, pay_time)):
+        if not self.cur.execute("INSERT INTO level_up (pet_id, from_level, to_level, cost, time) VALUES ({0}, {1}, {2}, {3}, {4})".format(pet.id, pet.level, to_level, score_cost, pay_time)):
             if not self.long_connect: self.close(False)
             return 100
         if self.cur.execute("SELECT id FROM level_up WHERE pet_id = {0} AND time = {1}".format(pet.id, pay_time)):
-            if not self.pay(pet.user.id, 'level_up', self.cur.fetchone()[0], pay_time):
+            if not self.pay(pet.user.id, 'level_up', self.cur.fetchone()[0], '-cost', 'time'):
                 if not self.long_connect: self.close(False)
                 return 1
         else:
@@ -398,7 +427,7 @@ class Game:
             if not self.cur.execute("UPDATE work SET time_end = {0} WHERE id = {1}".format(now_timestamp, record_id)):
                 if not self.long_connect: self.close(False)
                 return 100
-            if not self.pay(pet.user.id, 'work', record_id, now_timestamp):
+            if not self.pay(pet.user.id, 'work', record_id, 'earning', 'time_end'):
                 if not self.long_connect: self.close(False)
                 return 3
         else:
@@ -406,6 +435,74 @@ class Game:
             return 1
         if not self.long_connect: self.close(True)
         return 0
+
+    def addGamble(self, gamble_type, gamble_id, pay_score = 'cost - earning', pay_time = 'time'):
+        if not self.long_connect: self.connect()
+        gamble_earning = None
+        gamble_time = None
+        select_fields = ['user_id']
+        user_id = None
+        if isinstance(pay_score, str): select_fields.append(pay_score)
+        elif isinstance(pay_score, int): gamble_earning = pay_score
+        if isinstance(pay_time, str): select_fields.append(pay_time)
+        elif isinstance(pay_time, int): gamble_time = pay_time
+        if select_fields and self.cur.execute("SELECT {0} FROM {1} WHERE id = {2}".format(",".join(select_fields), "gamble_" + gamble_type, gamble_id)):
+            gamble_record = self.cur.fetchone()
+            user_id = gamble_record[0]
+            if isinstance(pay_score, str): 
+                gamble_earning = gamble_record[1]
+                if isinstance(pay_time, str):
+                    gamble_time = gamble_record[2]
+            elif isinstance(pay_time, str):
+                gamble_time = gamble_record[1]
+        if (gamble_earning is None) or (gamble_time is None) or (user_id is None):
+            if not self.long_connect: self.close(False)
+            return False
+        if not isinstance(gamble_time, int): gamble_time = self.timestamp()
+        if self.cur.execute('INSERT INTO gamble (user_id, ex_type, ex_id, earning, time) VALUES ({0}, "{1}", {2}, {3}, {4})'.format(user_id, gamble_type, gamble_id, gamble_earning, gamble_time)) \
+                and self.cur.execute('SELECT id, user_id FROM gamble WHERE ex_type = "{0}" and ex_id = {1}'.format(gamble_type, gamble_id)):
+            gamble_record = self.cur.fetchone()
+            if not self.pay(gamble_record[1], 'gamble', gamble_record[0], 'earning', 'time'):
+                if not self.long_connect: self.close(False)
+                return False
+        else:
+            if not self.long_connect: self.close(False)
+            return False
+        if not self.long_connect: self.close(True)
+        return True
+
+    def gambleGgl(self, user_id = None, user_qq = None):
+        """
+        non-negative integer: prize index
+        -1: not enough score
+        -100: system error
+        """
+        if not self.long_connect: self.connect()
+        user = self.getUser(user_id = user_id, user_qq = user_qq)
+        if not user:
+            if not self.long_connect: self.close(False)
+            return -100
+        game_config = self.game_config.gambles.ggl
+        if user.score < game_config.cost:
+            if not self.long_connect: self.close(False)
+            return -1
+        prize_cnt = len(game_config.prizes)
+        idx = self.random_select([item.rate for item in game_config.prizes])
+        if idx < 0 or idx >= prize_cnt:
+            print idx
+            if not self.long_connect: self.close(False)
+            return -100
+        prize_item = game_config.prizes[idx]
+        now_timestamp = self.timestamp()
+        if self.cur.execute("INSERT INTO gamble_ggl (user_id, prize, cost, earning, time) VALUES ({0}, {1}, {2}, {3}, {4})".format(user.id, idx, game_config.cost, prize_item.score, now_timestamp)) \
+                and self.cur.execute("SELECT id FROM gamble_ggl WHERE user_id = {0} AND time = {1}".format(user.id, now_timestamp)) \
+                and self.addGamble('ggl', self.cur.fetchone()[0], 'earning - cost', 'time'):
+            pass
+        else:
+            if not self.long_connect: self.close(False)
+            return -100
+        if not self.long_connect: self.close(True)
+        return idx
 
     def adminCharge(self, face, user_id = None, user_qq = None, administrator_id = None, administrator_qq = None):
         """
@@ -427,13 +524,51 @@ class Game:
             if not self.long_connect: self.close(False)
             return 100
         now_timestamp = self.timestamp()
-        if not self.cur.execute('INSERT INTO charge (user_id, administrator_id, face, earning, time) VALUES ({0}, {1}, "{2}", {3}, {4})').format(user.id, administrator.id, face, charge_item.score, now_timestamp) \
+        if not self.cur.execute('INSERT INTO charge (user_id, administrator_id, face, score, time) VALUES ({0}, {1}, "{2}", {3}, {4})'.format(user.id, administrator.id, face, charge_item.score, now_timestamp)) \
                 or not self.cur.execute('SELECT id FROM charge WHERE user_id = {0} AND administrator_id = {1} AND time = {2}'.format(user.id, administrator.id, now_timestamp)) \
-                or not self.pay(user.id, 'charge', self.cur.fetchone()[0], now_timestamp):
+                or not self.pay(user.id, 'charge', self.cur.fetchone()[0], 'score', 'time'):
             if not self.long_connect: self.close(False)
             return 100
         if not self.long_connect: self.close(True)
         return 0
+
+    def adminChargeMonthcard(self, face, user_id = None, user_qq = None, administrator_id = None, administrator_qq = None):
+        """
+        date object: end date
+        1: face not valid
+        2: user not exist
+        100: system error
+        """
+        card_item = self.getMonthcard(face)
+        if not card_item:
+            return 1
+        if not self.long_connect: self.connect()
+        user = self.getUser(user_id, user_qq, no_insert = True)
+        administrator = self.getUser(administrator_id, administrator_qq)
+        if not user: 
+            if not self.long_connect: self.close(False)
+            return 2
+        if not administrator:
+            if not self.long_connect: self.close(False)
+            return 100
+        now_timestamp = self.timestamp()
+        today = self.datetime(now_timestamp)
+        today = moment.date(today.year, today.month, today.day).date
+        start_timestamp = self.timestamp(today)
+        if self.cur.execute('SELECT time_end FROM monthcard WHERE user_id = {0} AND face = "{1}" ORDER BY time_end DESC LIMIT 1'.format(user.id, face)):
+            record = self.cur.fetchone()
+            if record[0] > start_timestamp: start_timestamp = record[0]
+        start_time = self.datetime(start_timestamp)
+        start_time = moment.date(start_time.year, start_time.month, start_time.day)
+        end_time = start_time.clone().add(months = 1).date
+        start_time = start_time.date
+        start_timestamp = self.timestamp(start_time)
+        end_timestamp = self.timestamp(end_time)
+        if not self.cur.execute('INSERT INTO monthcard (user_id, administrator_id, face, time_register, time_start, time_end) VALUES ({0}, {1}, "{2}", {3}, {4}, {5})'.format(user.id, administrator.id, face, now_timestamp, start_timestamp, end_timestamp)):
+            if not self.long_connect: self.close(False)
+            return 100
+        if not self.long_connect: self.close(True)
+        return datetime.date.fromtimestamp(end_timestamp/1000)
 
 class GameUser:
     def __init__(self,
