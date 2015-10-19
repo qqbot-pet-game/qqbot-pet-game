@@ -15,6 +15,11 @@ from HttpClient import *
 import re
 import datetime, time
 
+reload(sys)
+sys.setdefaultencoding("utf-8")
+
+root_path = os.path.split(os.path.realpath(__file__))[0] + '/'
+
 logging.basicConfig(
     filename='smartqq.log',
     level=logging.DEBUG,
@@ -40,10 +45,13 @@ class Group:
         self.msg_list = []
         self.global_config = DefaultConfigs()
         self.private_config = GroupConfig(self)
-        self.game_config = GameConfig().conf
-        self.game_helper = Game()
+        f = open(root_path + '/' + self.global_config.conf.get('global', 'face_config'))
+        self.face_codes = json.load(f)
+        f.close()
+        self.game_helper = Game(self, config_path = self.__operator.sys_paras['config_path'])
+        self.game_config = self.game_helper.game_config
+        self.update_config(game = False)
         self.error_msg = self.game_config.default.error_msg
-        self.update_config()
         self.process_order = [
             "game_test",
             "query_info",
@@ -51,12 +59,15 @@ class Group:
             "pet_practice",
             "pet_level_up",
             "pet_work",
+            "gamble_fqzs",
+            "gamble_sx",
             "gamble_ggl",
             "admin"
         ]
+        self.user_nicks = []
         logging.info(str(self.gid) + "群已激活, 当前执行顺序： " + str(self.process_order))
 
-    def update_config(self):
+    def update_config(self, game = True):
         self.private_config.update()
         use_private_config = bool(self.private_config.conf.getint("group", "use_private_config"))
         if use_private_config:
@@ -64,6 +75,10 @@ class Group:
         else:
             self.config = self.global_config
         self.config.update()
+
+        if game:
+            self.game_helper.update_config()
+            self.game_config = self.game_helper.game_config
 
     def handle(self, msg):
         self.update_config()
@@ -82,7 +97,10 @@ class Group:
         self.msg_list.append(msg)
 
     def reply(self, reply_content, fail_times=0):
-        fix_content = str(reply_content.replace("\\", "\\\\\\\\").replace("\n", "\\\\n").replace("\t", "\\\\t")).decode("utf-8")
+        fix_content = str(reply_content.replace("\\", "\\\\\\\\").replace("\n", "\\\\n").replace("\t", "\\\\t"))
+        for face_item in self.face_codes:
+            fix_content = fix_content.replace('[{0}]'.format(face_item['name']), '\\",[\\"face\\", {0}],\\"'.format(face_item['code']))
+        fix_content = fix_content.decode("utf-8")
         rsp = ""
         try:
             req_url = "http://d.web2.qq.com/channel/send_qun_msg2"
@@ -174,8 +192,16 @@ class Group:
         if not info: return None
         return info['nick']
 
+    def update_user_nick(self, user_nick, user_id = None, user_qq = None):
+        user = self.game_helper.getUser(user_id = user_id, user_qq = user_qq)
+        user_nick_item = self.game_helper.getItemFromListByProperty(self.user_nicks, 'id', user.id)
+        if user_nick_item: user_nick_item['nick'] = user_nick
+        else: self.user_nicks.append({'id': user.id, 'nick': user_nick})
+
     def game_test(self, msg):
-        if str(msg.content).lower().strip(' ') in ["test", "gametest", "game test"]:
+        if (not self.__operator.sys_paras['debug']) and (not msg.group_code in self.game_config.default.admin_gcodes):
+            return True
+        elif str(msg.content).lower().strip(' ') in ["test", "gametest", "game test"]:
             self.reply("我是游戏我是游戏，玩我玩我！")
             return True
         else:
@@ -364,6 +390,115 @@ class Group:
             return True
         else:
             return False
+
+    def gamble_fqzs(self, msg):
+        msg_content = str(msg.content).strip(' ')
+        reply_msg = None
+        user_qq = self.get_user_qq(msg)
+        user_nick = self.get_user_nick(msg)
+        game_config = self.game_config.gambles.fqzs
+        pour_match = re.compile('押({0})(\d+)'.format('|'.join([str(prize.name) for prize in game_config.prizes]))).match(msg_content)
+        if msg_content == "飞禽走兽":
+            if (user_qq is None) or (user_nick is None):
+                self.reply(self.error_msg)
+                return True
+            result = self.game_helper.gambleFqzsStart(user_qq = user_qq)
+            if result == 0:
+                reply_msg = "飞禽走兽已开局，将于{0}后结束".format(self.format_time_period(game_config.time * 1000))
+                for prize in game_config.prizes:
+                    reply_msg += "\n{0}   1赔{1}".format(prize.name, prize.rate - 1)
+            elif result == 1:
+                reply_msg = "当前正在进行其他游戏，请等待游戏结束后再开局"
+            else:
+                reply_msg = "无法开局，发生系统错误"
+            self.reply(reply_msg)
+            return True
+        elif pour_match:
+            face = pour_match.group(1)
+            score = int(pour_match.group(2))
+            self.update_user_nick(user_nick, user_qq = user_qq)
+            result = self.game_helper.gambleFqzsPour(face, score, user_qq = user_qq)
+            reply_msg = ""
+            if result == 0:
+                reply_msg = "【{0}】押了 {1} 分给{2}".format(user_nick, self.format_long_number(score), face)
+            elif result == 1:
+                return False
+            elif result == 3:
+                reply_msg = "【{0}】下注失败，积分不足".format(user_nick)
+            else:
+                if result == 2: print "invalid face"
+                reply_msg = "【{0}】下注失败，发生系统错误".format(user_nick)
+            self.reply(reply_msg)
+            return True
+        else:
+            return False
+    def gamble_fqzs_end(self, face, result):
+        reply_msg = "飞禽走兽结束了，本局开奖为：{0}".format(face)
+        for item in result:
+            user_nick = self.game_helper.getItemFromListByProperty(self.user_nicks, 'id', item['user_id'])
+            if user_nick: 
+                user_nick = user_nick['nick']
+                if item['earning'] > 0:
+                    reply_msg += "\n[Cheers]【{0}】赢得了 {1} 积分".format(user_nick, self.format_long_number(item['earning']))
+                elif item['earning'] < 0:
+                    reply_msg += "\n[BlowUp]【{0}】输掉了 {1} 积分".format(user_nick, self.format_long_number(-item['earning']))
+                else:
+                    reply_msg += "\n[Lolly]【{0}】押得四平八稳，没赔也没赚。".format(user_nick)
+        self.reply(reply_msg)
+
+    def gamble_sx(self, msg):
+        msg_content = str(msg.content).strip(' ')
+        reply_msg = None
+        user_qq = self.get_user_qq(msg)
+        user_nick = self.get_user_nick(msg)
+        game_config = self.game_config.gambles.sx
+        pour_match = re.compile('押({0})(\d+)'.format('|'.join([str(prize.name) for prize in game_config.prizes]))).match(msg_content)
+        if msg_content == "生肖":
+            if (user_qq is None) or (user_nick is None):
+                self.reply(self.error_msg)
+                return True
+            result = self.game_helper.gambleSxStart(user_qq = user_qq)
+            if result == 0:
+                reply_msg = "押生肖已开局，将于{0}后结束".format(self.format_time_period(game_config.time * 1000))
+                for prize in game_config.prizes:
+                    reply_msg += "\n{0}  {1}".format(prize.name, "  ".join([("%02d" % number) for number in prize.numbers]))
+            elif result == 1:
+                reply_msg = "当前正在进行其他游戏，请等待游戏结束后再开局"
+            else:
+                reply_msg = "无法开局，发生系统错误"
+            self.reply(reply_msg)
+            return True
+        elif pour_match:
+            face = pour_match.group(1)
+            score = int(pour_match.group(2))
+            self.update_user_nick(user_nick, user_qq = user_qq)
+            result = self.game_helper.gambleSxPour(face, score, user_qq = user_qq)
+            reply_msg = ""
+            if result == 0:
+                reply_msg = "【{0}】押了 {1} 分给{2}".format(user_nick, self.format_long_number(score), face)
+            elif result == 1:
+                return False
+            elif result == 3:
+                reply_msg = "【{0}】下注失败，积分不足".format(user_nick)
+            else:
+                reply_msg = "【{0}】下注失败，发生系统错误".format(user_nick)
+            self.reply(reply_msg)
+            return True
+        else:
+            return False
+    def gamble_sx_end(self, face, result):
+        reply_msg = "押生肖结束了，本局开奖为：{0}".format(face)
+        for item in result:
+            user_nick = self.game_helper.getItemFromListByProperty(self.user_nicks, 'id', item['user_id'])
+            if user_nick: 
+                user_nick = user_nick['nick']
+                if item['earning'] > 0:
+                    reply_msg += "\n[Cheers]【{0}】赢得了 {1} 积分".format(user_nick, self.format_long_number(item['earning']))
+                elif item['earning'] < 0:
+                    reply_msg += "\n[BlowUp]【{0}】输掉了 {1} 积分".format(user_nick, self.format_long_number(-item['earning']))
+                else:
+                    reply_msg += "\n[Lolly]【{0}】押得四平八稳，没赔也没赚。".format(user_nick)
+        self.reply(reply_msg)
 
     def gamble_ggl(self, msg):
         msg_content = str(msg.content).strip(' ')

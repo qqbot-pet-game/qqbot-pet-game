@@ -45,7 +45,8 @@ def date_to_millis(d):
 
 
 class QQ:
-    def __init__(self):
+    def __init__(self, sys_paras):
+        self.sys_paras = sys_paras
         self.default_config = DefaultConfigs()
         self.req = HttpClient()
 
@@ -58,7 +59,7 @@ class QQ:
         self.psessionid = ''
         self.appid = 0
         self.vfwebqq = ''
-        self.qrcode_path = self.default_config.conf.get("global", "qrcode_path")  # QRCode保存路径
+        self.qrcode_path = sys_paras['qrcode_path'] if sys_paras['qrcode_path'] else self.default_config.conf.get("global", "qrcode_path")  # QRCode保存路径
         self.username = ''
         self.account = 0
 
@@ -82,7 +83,7 @@ class QQ:
             error_times += 1
             self.req.Download('https://ssl.ptlogin2.qq.com/ptqrshow?appid={0}&e=0&l=L&s=8&d=72&v=4'.format(appid),
                               self.qrcode_path)
-            if len(sys.argv) > 1 and sys.argv[1] == "-d": os.system("open %s" % self.qrcode_path)
+            if self.sys_paras['debug']: os.system("open %s" % self.qrcode_path)
             logging.info("Please scan the downloaded QRCode")
 
             while True:
@@ -94,11 +95,11 @@ class QQ:
                 ret = html.split("'")
                 if ret[1] in ('0', '65'):  # 65: QRCode 失效, 0: 验证成功, 66: 未失效, 67: 验证中
                     break
-            if ret[1] == '0' or error_times > 10:
+            if ret[1] == '0' or error_times > self.sys_paras['login_retry_time']:
                 break
 
         if ret[1] != '0':
-            return
+            return False
         logging.info("QRCode scaned, now logging in.")
 
         # 删除QRCode文件
@@ -137,13 +138,14 @@ class QQ:
         if ret['retcode'] != 0:
             logging.debug(str(ret))
             logging.warning("return code:" + str(ret['retcode']))
-            return
+            return False
 
         self.vfwebqq = ret['result']['vfwebqq']
         self.psessionid = ret['result']['psessionid']
         self.account = ret['result']['uin']
 
         logging.info("QQ：{0} login successfully, Username：{1}".format(self.account, self.username))
+        return True
 
     def relogin(self, error_times=0):
         if error_times >= 10:
@@ -253,6 +255,25 @@ class QQ:
         self.friend_infos = {}
         self.group_infos = {}
 
+    def hash(self, x, K):
+        x = int(str(x))
+        N = [0, 0, 0, 0]
+        for T in range(0, len(K)): N[T % 4] ^= ord(K[T])
+        U = ["EC", "OK"]
+        V = [0, 0, 0, 0]
+        V[0] = x >> 24 & 255 ^ ord(U[0][0])
+        V[1] = x >> 16 & 255 ^ ord(U[0][1])
+        V[2] = x >> 8 & 255 ^ ord(U[1][0])
+        V[3] = x & 255 ^ ord(U[1][1])
+        U = [0 for i in range(0, 8)]
+        for T in range(0, 8): U[T] = N[T >> 1] if T % 2 == 0 else V[T >> 1]
+        N = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "A", "B", "C", "D", "E", "F"]
+        V = ""
+        for T in range(0, len(U)):
+            V += N[U[T] >> 4 & 15]
+            V += N[U[T] & 15]
+        return V
+
     def check_refresh(self):
         now_time = time.time()
         if now_time - self.refresh_interval > self.last_refresh:
@@ -353,6 +374,20 @@ class QQ:
             self.group_infos[gcode] = ginfo
         except BaseException, error:
             print "error"
+            print error
+            logging.warning(error)
+
+    def get_groupnames(self):
+        try:
+            fetch_response = self.req.Post("http://s.web2.qq.com/api/get_group_name_list_mask2", 
+                {'r': '{{"vfwebqq":"{0}", "hash":"{1}"}}'.format(self.vfwebqq, self.hash(self.account, self.ptwebqq))},
+                self.default_config.conf.get("global", "connect_referer"))
+            gnamelist = json.loads(fetch_response)
+            gnamelist = gnamelist['result']['gnamelist']
+            return gnamelist
+        except BaseException, error:
+            print "account:", self.account
+            print "ptwebqq:", self.ptwebqq
             print error
             logging.warning(error)
         

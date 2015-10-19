@@ -10,9 +10,10 @@
         "score": 0,
         "power": 100,
         "signin_score": 50000,
-        "work_interval": 10,
+        "work_interval": 3600,
         "power_cost_of_practice": 10,
         "admin_qq": ["597789699"],
+        "admin_gcodes": [],
         "error_msg": "系统发生错误，请重试或联系管理员"
     },
     "levels": [
@@ -526,6 +527,68 @@
         }
     ],
     "gambles": {
+        "fqzs": {
+            "name": "飞禽走兽",
+            "time": 120,
+            "items": [
+                { "name": "乌鸦", "rate": 12 },
+                { "name": "孔雀", "rate": 9 },
+                { "name": "仙鹤", "rate": 9 },
+                { "name": "老鹰", "rate": 6 },
+                { "name": "兔子", "rate": 12 },
+                { "name": "熊猫", "rate": 9 },
+                { "name": "猴子", "rate": 9 },
+                { "name": "狮子", "rate": 6 },
+                { "name": "银鲨鱼", "rate": 3 },
+                { "name": "金鲨鱼", "rate": 2 }
+            ],
+            "prizes": [
+                { "name": "乌鸦", "items": ["乌鸦"], "rate": 7 },
+                { "name": "孔雀", "items": ["孔雀"], "rate": 9 },
+                { "name": "仙鹤", "items": ["仙鹤"], "rate": 9 },
+                { "name": "老鹰", "items": ["老鹰"], "rate": 13 },
+                { "name": "兔子", "items": ["兔子"], "rate": 7 },
+                { "name": "熊猫", "items": ["熊猫"], "rate": 9 },
+                { "name": "猴子", "items": ["猴子"], "rate": 9 },
+                { "name": "狮子", "items": ["狮子"], "rate": 13 },
+                { "name": "银鲨鱼", "items": ["银鲨鱼"], "rate": 25 },
+                { "name": "金鲨鱼", "items": ["金鲨鱼"], "rate": 37 },
+                { "name": "飞禽", "items": ["乌鸦", "孔雀", "仙鹤", "老鹰"], "rate": 2},
+                { "name": "走兽", "items": ["兔子", "熊猫", "猴子", "狮子"], "rate": 2}
+            ]
+        },
+        "sx": {
+            "name": "生肖",
+            "time": 120,
+            "numbers": [
+                { "number": 1, "rate": 1}, { "number": 13, "rate": 1}, { "number": 25, "rate": 1}, { "number": 37, "rate": 1}, { "number": 49, "rate": 1}, 
+                { "number": 2, "rate": 1}, { "number": 14, "rate": 1}, { "number": 26, "rate": 1}, { "number": 38, "rate": 1}, { "number": 50, "rate": 1}, 
+                { "number": 3, "rate": 1}, { "number": 15, "rate": 1}, { "number": 27, "rate": 1}, { "number": 39, "rate": 1}, { "number": 51, "rate": 1}, 
+                { "number": 4, "rate": 1}, { "number": 16, "rate": 1}, { "number": 28, "rate": 1}, { "number": 40, "rate": 1}, { "number": 52, "rate": 1}, 
+                { "number": 5, "rate": 1}, { "number": 17, "rate": 1}, { "number": 29, "rate": 1}, { "number": 41, "rate": 1}, { "number": 53, "rate": 1}, 
+                { "number": 6, "rate": 1}, { "number": 18, "rate": 1}, { "number": 30, "rate": 1}, { "number": 42, "rate": 1}, { "number": 54, "rate": 1}, 
+                { "number": 7, "rate": 1}, { "number": 19, "rate": 1}, { "number": 31, "rate": 1}, { "number": 43, "rate": 1}, { "number": 55, "rate": 1}, 
+                { "number": 8, "rate": 1}, { "number": 20, "rate": 1}, { "number": 32, "rate": 1}, { "number": 44, "rate": 1}, { "number": 56, "rate": 1}, 
+                { "number": 9, "rate": 1}, { "number": 21, "rate": 1}, { "number": 33, "rate": 1}, { "number": 45, "rate": 1}, { "number": 57, "rate": 1}, 
+                { "number": 10, "rate": 1}, { "number": 22, "rate": 1}, { "number": 34, "rate": 1}, { "number": 46, "rate": 1}, { "number": 58, "rate": 1}, 
+                { "number": 11, "rate": 1}, { "number": 23, "rate": 1}, { "number": 35, "rate": 1}, { "number": 47, "rate": 1}, { "number": 59, "rate": 1}, 
+                { "number": 12, "rate": 1}, { "number": 24, "rate": 1}, { "number": 36, "rate": 1}, { "number": 48, "rate": 1}, { "number": 60, "rate": 1}
+            ],
+            "prizes": [
+                { "name": "鼠", "numbers": [1, 13, 25, 37, 49], "rate": 13},
+                { "name": "牛", "numbers": [2, 14, 26, 38, 50], "rate": 13},
+                { "name": "虎", "numbers": [3, 15, 27, 39, 51], "rate": 13},
+                { "name": "兔", "numbers": [4, 16, 28, 40, 52], "rate": 13},
+                { "name": "龙", "numbers": [5, 17, 29, 41, 53], "rate": 13},
+                { "name": "蛇", "numbers": [6, 18, 30, 42, 54], "rate": 13},
+                { "name": "马", "numbers": [7, 19, 31, 43, 55], "rate": 13},
+                { "name": "羊", "numbers": [8, 20, 32, 44, 56], "rate": 13},
+                { "name": "猴", "numbers": [9, 21, 33, 45, 57], "rate": 13},
+                { "name": "鸡", "numbers": [10, 22, 34, 46, 58], "rate": 13},
+                { "name": "狗", "numbers": [11, 23, 35, 47, 59], "rate": 13},
+                { "name": "鸡", "numbers": [12, 24, 36, 48, 60], "rate": 13}
+            ]
+        },
         "ggl": {
             "name": "幸运刮刮乐",
             "cost": 3000000,

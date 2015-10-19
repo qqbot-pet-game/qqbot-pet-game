@@ -6,18 +6,19 @@
 import ConfigParser
 import os
 
+root_path = os.path.split(os.path.realpath(__file__))[0] + '/'
 
 class Configs:
     def __init__(self):
         self.conf = ConfigParser.ConfigParser()
-        self.config_path = "./config/QQBot_default.conf"
+        self.config_path = root_path + "./config/QQBot_default.conf"
 
     def update(self):
         self.conf.read(self.config_path)
 
     def check_config_files_exists(self):
-        if not os.path.isdir("./config"):
-            os.mkdir("./config")
+        if not os.path.isdir(root_path + "./config"):
+            os.mkdir(root_path + "./config")
         if not os.path.exists(self.config_path):
             with open(self.config_path, "w") as tmp:
                 tmp.close()
@@ -30,9 +31,9 @@ class Configs:
 class DefaultConfigs(Configs):
     def __init__(self):
         Configs.__init__(self)
-        self.config_path = "./config/QQBot_default.conf"
-        if not os.path.isdir("./config"):
-            os.mkdir("./config")
+        self.config_path = root_path + "./config/QQBot_default.conf"
+        if not os.path.isdir(root_path + "./config"):
+            os.mkdir(root_path + "./config")
         if not os.path.exists(self.config_path):
             with open(self.config_path, "w") as tmp:
                 tmp.close()
@@ -75,14 +76,14 @@ class GroupConfig(Configs):
         Configs.__init__(self)
         self.group = group
         self.config_file_name = str(group.gid) + ".conf"
-        self.config_path = "./config/group/" + self.config_file_name
+        self.config_path = root_path + "./config/group/" + self.config_file_name
         self.global_config = DefaultConfigs()
         self.check_config_files_exists()
         self.conf.read(self.config_path)
 
     def check_config_files_exists(self):
-        if not os.path.isdir("./config/group/"):
-            os.mkdir("./config/group/")
+        if not os.path.isdir(root_path + "./config/group/"):
+            os.mkdir(root_path + "./config/group/")
         if not os.path.exists(self.config_path):
             with open(self.config_path, "w") as tmp:
                 tmp.close()
@@ -105,14 +106,14 @@ class PmConfig(Configs):
         Configs.__init__(self)
         self.pm = pm
         self.config_file_name = str(pm.tid) + ".conf"
-        self.config_path = "./config/pm/" + self.config_file_name
+        self.config_path = root_path + "./config/pm/" + self.config_file_name
         self.global_config = DefaultConfigs()
         self.check_config_files_exists()
         self.conf.read(self.config_path)
 
     def check_config_files_exists(self):
-        if not os.path.isdir("./config/pm/"):
-            os.mkdir("./config/pm/")
+        if not os.path.isdir(root_path + "./config/pm/"):
+            os.mkdir(root_path + "./config/pm/")
         if not os.path.exists(self.config_path):
             with open(self.config_path, "w") as tmp:
                 tmp.close()
@@ -135,14 +136,14 @@ class SessConfig(Configs):
         Configs.__init__(self)
         self.sess = sess
         self.config_file_name = str(sess.tid) + ".conf"
-        self.config_path = "./config/sess/" + self.config_file_name
+        self.config_path = root_path + "./config/sess/" + self.config_file_name
         self.global_config = DefaultConfigs()
         self.check_config_files_exists()
         self.conf.read(self.config_path)
 
     def check_config_files_exists(self):
-        if not os.path.isdir("./config/sess/"):
-            os.mkdir("./config/sess/")
+        if not os.path.isdir(root_path + "./config/sess/"):
+            os.mkdir(root_path + "./config/sess/")
         if not os.path.exists(self.config_path):
             with open(self.config_path, "w") as tmp:
                 tmp.close()

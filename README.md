@@ -7,6 +7,11 @@ SmartQQ-Bot Ver-0.2
 登陆时采用QQ安全中心的二维码做为登陆条件, 不需要在程序里输入QQ号码及QQ密码。
 
 *旧版机器人仍有保留在old_QQBot.py中。*
+
+## setup:
+`pip install MySQL-python moment cookielib urllib urllib2`
+execute setup.sql in mysql
+
 ##基本功能
 
 ###群聊功能：

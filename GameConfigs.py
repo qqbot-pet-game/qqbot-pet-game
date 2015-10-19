@@ -1,4 +1,5 @@
 import json
+import os
 
 from Configs import DefaultConfigs
 
@@ -17,9 +18,9 @@ def convert_dict_to_object(_dict):
         return _dict
 
 class GameConfig:
-    def __init__(self):
+    def __init__(self, config_path = None):
         self.global_config = DefaultConfigs()
-        self.config_path = self.global_config.conf.get("global", "game_config")
+        self.config_path = config_path if config_path else (os.path.split(os.path.realpath(__file__))[0] + '/' + self.global_config.conf.get("global", "game_config"))
         config_file = open(self.config_path)
         self.conf_dict = json.load(config_file)
         config_file.close()

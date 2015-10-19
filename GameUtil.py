@@ -3,12 +3,16 @@ from GameConfigs import *
 import MySQLdb
 import time, datetime, moment
 import random
+import threading
 
 class Game:
-    def __init__(self, long_connect = False):
-        self.game_config = GameConfig().conf
+    def __init__(self, group_manager, long_connect = False, config_path = None):
+        self.group_manager = group_manager
+        self.config_path = config_path
         self.long_connect = True if long_connect else False
         self.conn_retain_count = 0
+        self.update_config()
+        self.current_gamble = None # should be a tuple: (str:type, int:id, str|int:face)
         if self.long_connect: self.connect()
 
     def __del__(self):
@@ -16,7 +20,18 @@ class Game:
         #     self.close()
         # except Exception, e:
         #     print "[Waring] failed to close game database connection"
-        if self.long_connect: self.close()
+        if self.long_connect: self.close(True)
+
+    def update_config(self):
+        try:
+            self.game_config = GameConfig(self.config_path).conf
+            if self.long_connect: 
+                self.close(True)
+                self.connect()
+            return True
+        except Exception:
+            pass
+        return False
 
     def connect(self):
         if self.conn_retain_count == 0:
@@ -57,6 +72,10 @@ class Game:
         else:
             return False
 
+    def wait(self, wait_time, callback, *callback_args):
+        time.sleep(wait_time)
+        callback(*callback_args)
+
     def timestamp(self, dt = None):
         if dt is None:
             return int(time.time() * 1000)
@@ -71,8 +90,15 @@ class Game:
     def getItemFromListByProperty(self, arr, prop, val):
         assert isinstance(arr, list), "arr must be a list"
         for item in arr:
-            if hasattr(item, prop) and getattr(item, prop) == val: return item
+            if isinstance(item, dict) and prop in item and item[prop] == val: return item
+            elif hasattr(item, prop) and getattr(item, prop) == val: return item
         return None
+    def sortListByProperty(self, arr, prop, reverse = False):
+        assert isinstance(arr, list), "arr must be a list"
+        def key(item):
+            if isinstance(item, dict): return item[prop]
+            else: return getattr(item, prop)
+        return sorted(arr, key = key, reverse = reverse)
     def getCharge(self, face):
         return self.getItemFromListByProperty(self.game_config.charges, 'face', face)
     def getMonthcard(self, face):
@@ -121,7 +147,7 @@ class Game:
                 elif (rate_sum == 1) and (rand == 1): return k
             return None
 
-    def getUser(self, user_id = None, user_qq = None, no_insert = False):
+    def getUser(self, user_id = None, user_qq = None, no_insert = False, count_frozen_score = True):
         if not self.long_connect: self.connect()
         user = None
         if not user_id is None:
@@ -135,6 +161,9 @@ class Game:
             else:
                 if self.cur.execute('INSERT INTO user (admin_qq, group_nid, qq, score) VALUES ("{0}", "{1}", "{2}", {3})'.format(user_qq[0], user_qq[1], user_qq[2], self.game_config.default.score)) and not no_insert:
                     user = self.getUser(user_qq = user_qq, no_insert = True)
+        if not user is None and count_frozen_score:
+            frozen_score = self.getUserFrozenScore(user.id)
+            user.score = user.score - frozen_score
         if not self.long_connect: self.close(True)
         return user
 
@@ -162,6 +191,19 @@ class Game:
         if not self.long_connect: self.close(True)
         return pet
 
+    def getUserFrozenScore(self, user_id):
+        if not self.long_connect: self.connect()
+        frozen_score = 0
+        # frozen in gambles: fqzs and sx
+        if self.current_gamble and (self.current_gamble[0] in ["fqzs", "sx"]):
+            self.cur.execute('SELECT SUM(cost) FROM gamble_{0} WHERE game_id = {1} AND user_id = {2}'.format(self.current_gamble[0], self.current_gamble[1], user_id))
+            record = self.cur.fetchone()
+            if record[0]:
+                frozen_score += record[0]
+        if not self.long_connect: self.close()
+        return frozen_score
+
+
     def setUserScore(self, score, user_id = None, user_qq = None):
         if not self.long_connect: self.connect()
         user = self.getUser(user_id = user_id, user_qq = user_qq)
@@ -179,7 +221,7 @@ class Game:
 
     def addUserScore(self, score, user_id = None, user_qq = None):
         if not self.long_connect: self.connect()
-        user = self.getUser(user_id, user_qq)
+        user = self.getUser(user_id, user_qq, count_frozen_score = False)
         if not user: 
             if not self.long_connect: self.close()
             return False
@@ -261,7 +303,7 @@ class Game:
         100: system error
         """
         monthcard_item = self.getMonthcard(monthcard_face)
-        if not monthcard_item and not monthcard_face:
+        if not monthcard_item and monthcard_face:
             return 4
         if not self.long_connect: self.connect()
         pet = self.getPet(user_id = user_id, user_qq = user_qq)
@@ -338,7 +380,7 @@ class Game:
             pay_time = self.timestamp()
             if self.cur.execute("INSERT INTO practice (pet_id, earning, time) VALUES ({0}, {1}, {2})".format(pet.id, total_add_score, pay_time)):
                 if self.cur.execute("SELECT id FROM practice WHERE pet_id = {0} AND time = {1}".format(pet.id, pay_time)) \
-                        and self.pay(pet.user.id, "practice", self.cur.fetchone().id, 'earning', 'time'):
+                        and self.pay(pet.user.id, "practice", self.cur.fetchone()[0], 'earning', 'time'):
                     pass
                 else:
                     if not self.long_connect: self.close(False)
@@ -436,7 +478,7 @@ class Game:
         if not self.long_connect: self.close(True)
         return 0
 
-    def addGamble(self, gamble_type, gamble_id, pay_score = 'cost - earning', pay_time = 'time'):
+    def addGamble(self, gamble_type, gamble_id, pay_score = 'earning - cost', pay_time = 'time'):
         if not self.long_connect: self.connect()
         gamble_earning = None
         gamble_time = None
@@ -470,6 +512,214 @@ class Game:
             return False
         if not self.long_connect: self.close(True)
         return True
+
+    def gambleFqzsStart(self, user_id = None, user_qq = None):
+        """
+        0: success
+        1: in gamble
+        100: system error
+        """
+        if not self.current_gamble is None:
+            return 1
+        if not self.long_connect: self.connect()
+        user = self.getUser(user_id = user_id, user_qq = user_qq)
+        if not user:
+            if not self.long_connect: self.close(False)
+            return 100
+        game_config = self.game_config.gambles.fqzs
+        now_timestamp = self.timestamp()
+        face_idx = self.random_select([item.rate for item in game_config.items])
+        if face_idx < 0 or face_idx >= len(game_config.items):
+            if not self.long_connect: self.close(False)
+            return 100
+        face = game_config.items[face_idx].name
+        if not self.cur.execute('INSERT INTO gamble_fqzs_game (user_id, time_start, time_end, face) VALUES ({0}, {1}, {2}, "{3}")'.format(user.id, now_timestamp, 0, face)):
+            if not self.long_connect: self.close(False)
+            return 100
+        if not self.cur.execute('SELECT id FROM gamble_fqzs_game WHERE time_start = {0}'.format(now_timestamp)):
+            if not self.long_connect: self.close(False)
+            return 100
+        gamble_record = self.cur.fetchone()
+        self.current_gamble = ('fqzs', gamble_record[0], str(face))
+        t = threading.Thread(target = self.wait, args = (game_config.time, self.gambleFqzsEnd))
+        t.setDaemon(True)
+        t.start()
+        if not self.long_connect: self.close(True)
+        return 0
+
+    def gambleFqzsPour(self, face, pay_score, user_id = None, user_qq = None):
+        """
+        0: success
+        1: not in gamble
+        2: item not valid
+        3: insufficient score
+        100: system error
+        """
+        if self.current_gamble is None or self.current_gamble[0] != "fqzs":
+            return 1
+        game_config = self.game_config.gambles.fqzs
+        face_item = self.getItemFromListByProperty(game_config.prizes, 'name', face)
+        if not face_item:
+            return 2
+        if not self.long_connect: self.connect()
+        user = self.getUser(user_id = user_id, user_qq = user_qq)
+        if not user:
+            if not self.long_connect: self.close(False)
+            return 100
+        if user.score < pay_score:
+            if not self.long_connect: self.close(False)
+            return 3
+        game_id = self.current_gamble[1]
+        earning = 0
+        if self.current_gamble[2] in [str(item) for item in face_item.items]:
+            earning = pay_score * face_item.rate
+        now_timestamp = self.timestamp()
+        if not self.cur.execute('INSERT INTO gamble_fqzs (user_id, game_id, face, cost, earning, time_pay, time_earn) VALUES ({0}, {1}, "{2}", {3}, {4}, {5}, {6})'.format(user.id, game_id, face, pay_score, earning, now_timestamp, 0)):
+            if not self.long_connect: self.close(False)
+            return 100
+        if not self.long_connect: self.close(True)
+        return 0
+
+    def gambleFqzsEnd(self):
+        """
+        0: success
+        1: not in gamble
+        100: system error
+        """
+        if self.current_gamble is None:
+            return 1
+        if not self.long_connect: self.connect()
+        game_id = self.current_gamble[1]
+        now_timestamp = self.timestamp()
+        game_config = self.game_config.gambles.fqzs
+        if not self.cur.execute('UPDATE gamble_fqzs_game SET time_end = {0} WHERE id = {1}'.format(now_timestamp, game_id)):
+            if not self.long_connect: self.close(False)
+            return 100
+        self.cur.execute('UPDATE gamble_fqzs SET time_earn = {0} WHERE game_id = {1}'.format(now_timestamp, game_id))
+        self.cur.execute('SELECT id, user_id, face, cost, earning FROM gamble_fqzs WHERE game_id = {0}'.format(game_id))
+        pour_records = []
+        while True:
+            record = self.cur.fetchone()
+            if record is None: break
+            pour_records.append({'id': record[0], 'user_id': record[1], 'face': record[2], 'cost': record[3], 'earning': record[4]})
+        result = []
+        for record in pour_records:
+            if not self.addGamble('fqzs', record['id'], 'earning - cost', 'time_earn'):
+                if not self.long_connect: self.close(False)
+                return 100
+            item = self.getItemFromListByProperty(result, 'user_id', record['user_id'])
+            if item: item['earning'] += (record['earning'] - record['cost'])
+            else: result.append({'user_id': record['user_id'], 'earning': record['earning'] - record['cost']})
+        result = self.sortListByProperty(result, 'earning', reverse = True)
+        face = self.current_gamble[2]
+        self.current_gamble = None
+        if not self.long_connect: self.close(True)
+        self.group_manager.gamble_fqzs_end(face, result)
+        return 0
+
+    def gambleSxStart(self, user_id = None, user_qq = None):
+        """
+        0: success
+        1: in gamble
+        100: system error
+        """
+        if not self.current_gamble is None:
+            return 1
+        if not self.long_connect: self.connect()
+        user = self.getUser(user_id = user_id, user_qq = user_qq)
+        if not user:
+            if not self.long_connect: self.close(False)
+            return 100
+        game_config = self.game_config.gambles.sx
+        now_timestamp = self.timestamp()
+        number_idx = self.random_select([item.rate for item in game_config.numbers])
+        if number_idx < 0 or number_idx >= len(game_config.numbers):
+            if not self.long_connect: self.close(False)
+            return 100
+        number = game_config.numbers[number_idx].number
+        if not self.cur.execute('INSERT INTO gamble_sx_game (user_id, time_start, time_end, `number`) VALUES ({0}, {1}, {2}, {3})'.format(user.id, now_timestamp, 0, number)):
+            if not self.long_connect: self.close(False)
+            return 100
+        if not self.cur.execute('SELECT id FROM gamble_sx_game WHERE time_start = {0}'.format(now_timestamp)):
+            if not self.long_connect: self.close(False)
+            return 100
+        gamble_record = self.cur.fetchone()
+        self.current_gamble = ('sx', gamble_record[0], number)
+        t = threading.Thread(target = self.wait, args = (game_config.time, self.gambleSxEnd))
+        t.setDaemon(True)
+        t.start()
+        if not self.long_connect: self.close(True)
+        return 0
+
+    def gambleSxPour(self, face, pay_score, user_id = None, user_qq = None):
+        """
+        0: success
+        1: not in gamble
+        2: item not valid
+        3: insufficient score
+        100: system error
+        """
+        if self.current_gamble is None or self.current_gamble[0] != "sx":
+            return 1
+        game_config = self.game_config.gambles.sx
+        face_item = self.getItemFromListByProperty(game_config.prizes, 'name', face)
+        if not face_item:
+            return 2
+        if not self.long_connect: self.connect()
+        user = self.getUser(user_id = user_id, user_qq = user_qq)
+        if not user:
+            if not self.long_connect: self.close(False)
+            return 100
+        if user.score < pay_score:
+            if not self.long_connect: self.close(False)
+            return 3
+        game_id = self.current_gamble[1]
+        earning = 0
+        if self.current_gamble[2] in face_item.numbers:
+            earning = pay_score * face_item.rate
+        now_timestamp = self.timestamp()
+        if not self.cur.execute('INSERT INTO gamble_sx (user_id, game_id, face, cost, earning, time_pay, time_earn) VALUES ({0}, {1}, "{2}", {3}, {4}, {5}, {6})'.format(user.id, game_id, face, pay_score, earning, now_timestamp, 0)):
+            if not self.long_connect: self.close(False)
+            return 100
+        if not self.long_connect: self.close(True)
+        return 0
+
+    def gambleSxEnd(self):
+        """
+        0: success
+        1: not in gamble
+        100: system error
+        """
+        if self.current_gamble is None:
+            return 1
+        if not self.long_connect: self.connect()
+        game_id = self.current_gamble[1]
+        now_timestamp = self.timestamp()
+        game_config = self.game_config.gambles.sx
+        if not self.cur.execute('UPDATE gamble_sx_game SET time_end = {0} WHERE id = {1}'.format(now_timestamp, game_id)):
+            if not self.long_connect: self.close(False)
+            return 100
+        self.cur.execute('UPDATE gamble_sx SET time_earn = {0} WHERE game_id = {1}'.format(now_timestamp, game_id))
+        self.cur.execute('SELECT id, user_id, face, cost, earning FROM gamble_sx WHERE game_id = {0}'.format(game_id))
+        pour_records = []
+        while True:
+            record = self.cur.fetchone()
+            if record is None: break
+            pour_records.append({'id': record[0], 'user_id': record[1], 'face': record[2], 'cost': record[3], 'earning': record[4]})
+        result = []
+        for record in pour_records:
+            if not self.addGamble('sx', record['id'], 'earning - cost', 'time_earn'):
+                if not self.long_connect: self.close(False)
+                return 100
+            item = self.getItemFromListByProperty(result, 'user_id', record['user_id'])
+            if item: item['earning'] += (record['earning'] - record['cost'])
+            else: result.append({'user_id': record['user_id'], 'earning': record['earning'] - record['cost']})
+        result = self.sortListByProperty(result, 'earning', reverse = True)
+        number = self.current_gamble[2]
+        self.current_gamble = None
+        if not self.long_connect: self.close(True)
+        self.group_manager.gamble_sx_end(number, result)
+        return 0
 
     def gambleGgl(self, user_id = None, user_qq = None):
         """
