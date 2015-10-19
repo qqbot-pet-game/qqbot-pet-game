@@ -58,3 +58,6 @@ target/
 
 # Config file
 config/bot.conf
+
+# qr code file
+v.jpg

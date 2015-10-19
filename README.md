@@ -9,8 +9,10 @@ SmartQQ-Bot Ver-0.2
 *旧版机器人仍有保留在old_QQBot.py中。*
 
 ## setup:
-`pip install MySQL-python moment cookielib urllib urllib2`
-`cp config/bot.tpl.conf config/bot.conf`
+```
+pip install MySQL-python moment cookielib urllib urllib2
+cp config/bot.tpl.conf config/bot.conf
+```
 execute setup.sql in mysql
 
 ##基本功能
