@@ -383,7 +383,7 @@ class Group:
             elif result == 1:
                 reply_msg += "并没有在打工"
             elif result == 2:
-                reply_msg += "还没打够{0}的工，请稍后再试".format(self.format_long_number(work_interval))
+                reply_msg += "还没打够{0}的工，请稍后再试".format(self.format_time_period(work_interval))
             else:
                 reply_msg += "下班失败，发生系统错误"
             self.reply(reply_msg)
