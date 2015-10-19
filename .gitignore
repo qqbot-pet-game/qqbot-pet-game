@@ -58,6 +58,9 @@ target/
 
 # Config file
 config/bot.conf
+config/game_config.json
 
 # qr code file
 v.jpg
+
+smartqq.log
