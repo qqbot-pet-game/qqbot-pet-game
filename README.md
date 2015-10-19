@@ -10,7 +10,7 @@ SmartQQ-Bot Ver-0.2
 
 ## setup:
 ```
-pip install MySQL-python moment cookielib urllib urllib2
+pip install MySQL-python moment
 cp config/bot.tpl.conf config/bot.conf
 ```
 execute setup.sql in mysql
