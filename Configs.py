@@ -11,7 +11,7 @@ root_path = os.path.split(os.path.realpath(__file__))[0] + '/'
 class Configs:
     def __init__(self):
         self.conf = ConfigParser.ConfigParser()
-        self.config_path = root_path + "./config/QQBot_default.conf"
+        self.config_path = root_path + "./config/bot.conf"
 
     def update(self):
         self.conf.read(self.config_path)
@@ -31,7 +31,7 @@ class Configs:
 class DefaultConfigs(Configs):
     def __init__(self):
         Configs.__init__(self)
-        self.config_path = root_path + "./config/QQBot_default.conf"
+        self.config_path = root_path + "./config/bot.conf"
         if not os.path.isdir(root_path + "./config"):
             os.mkdir(root_path + "./config")
         if not os.path.exists(self.config_path):
