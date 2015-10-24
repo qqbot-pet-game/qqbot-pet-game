@@ -461,7 +461,7 @@ class Group:
             if result == 0:
                 reply_msg = "押生肖已开局，将于{0}后结束".format(self.format_time_period(game_config.time * 1000))
                 for prize in game_config.prizes:
-                    reply_msg += "\n{0}  {1}".format(prize.name, "  ".join([("%02d" % number) for number in prize.numbers]))
+                    if prize.type == "sx": reply_msg += "\n{0}  {1}".format(prize.name, "  ".join([("%02d" % number) for number in prize.numbers]))
             elif result == 1:
                 reply_msg = "当前正在进行其他游戏，请等待游戏结束后再开局"
             else:
@@ -487,7 +487,7 @@ class Group:
         else:
             return False
     def gamble_sx_end(self, face, result):
-        reply_msg = "押生肖结束了，本局开奖为：{0}".format(face)
+        reply_msg = "押生肖结束了，本局开奖为：\n    大码：{0}\n    小码：{1}".format("、".join(["%d"%n for n in face[0]]), "、".join(["%d"%n for n in face[1]]))
         for item in result:
             user_nick = self.game_helper.getItemFromListByProperty(self.user_nicks, 'id', item['user_id'])
             if user_nick: 

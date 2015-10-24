@@ -4,6 +4,7 @@ import MySQLdb
 import time, datetime, moment
 import random
 import threading
+import copy
 
 class Game:
     def __init__(self, group_manager, long_connect = False, config_path = None):
@@ -12,7 +13,7 @@ class Game:
         self.long_connect = True if long_connect else False
         self.conn_retain_count = 0
         self.update_config()
-        self.current_gamble = None # should be a tuple: (str:type, int:id, str|int:face)
+        self.current_gamble = None # should be a tuple: (str:type, int:id, prize_face)
         if self.long_connect: self.connect()
 
     def __del__(self):
@@ -132,20 +133,42 @@ class Game:
                 idx += 1
             return idx
         elif isinstance(rates, dict):
-            key_list = rates.keys
+            key_list = rates.keys()
             if len(key_list) == 0: return None
             total_rate = 0
             rate_sum = 0
             rand = random.random()
             # if rand == 0: return key_list[0]
             # elif rand == 1: return key_list[-1]
-            for k,r in rates.iteritem(): total_rate += r
-            for k,r in rates.iteritem():
+            for k,r in rates.items(): total_rate += r
+            total_rate = float(total_rate)
+            for k,r in rates.items():
                 if r == total_rate: return k
                 rate_sum += r / total_rate
                 if rand < rate_sum: return k
                 elif (rate_sum == 1) and (rand == 1): return k
             return None
+
+    def random_select_multi(self, rates, cnt):
+        idx_list = []
+        rates = copy.copy(rates)
+        if isinstance(rates, list):
+            if len(rates) < cnt: return None
+            while len(idx_list) < cnt:
+                idx = self.random_select(rates)
+                if idx is None: return None
+                idx_list.append(idx)
+                del rates[idx]
+        elif isinstance(rates, dict):
+            key_list = rates.keys()
+            if len(key_list) < cnt: return None
+            while len(idx_list) < cnt:
+                idx = self.random_select(rates)
+                if idx is None: return None
+                idx_list.append(idx)
+                del rates[idx]
+        if len(idx_list) != cnt: return None
+        else: return idx_list
 
     def getUser(self, user_id = None, user_qq = None, no_insert = False, count_frozen_score = True):
         if not self.long_connect: self.connect()
@@ -638,19 +661,26 @@ class Game:
             return 100
         game_config = self.game_config.gambles.sx
         now_timestamp = self.timestamp()
-        number_idx = self.random_select([item.rate for item in game_config.numbers])
-        if number_idx < 0 or number_idx >= len(game_config.numbers):
+        number_idx_list = self.random_select_multi([item.rate for item in game_config.numbers], game_config.cnt_big + game_config.cnt_small)
+        number_big = []
+        number_small = []
+        if number_idx_list is None:
             if not self.long_connect: self.close(False)
             return 100
-        number = game_config.numbers[number_idx].number
-        if not self.cur.execute('INSERT INTO gamble_sx_game (user_id, time_start, time_end, `number`) VALUES ({0}, {1}, {2}, {3})'.format(user.id, now_timestamp, 0, number)):
+        for number_idx in number_idx_list:
+            if number_idx < 0 or number_idx >= len(game_config.numbers):
+                if not self.long_connect: self.close(False)
+                return 100
+        number_big = [game_config.numbers[number_idx].number for number_idx in number_idx_list[0:game_config.cnt_big]]
+        number_small = [game_config.numbers[number_idx].number for number_idx in number_idx_list[game_config.cnt_big:game_config.cnt_small]]
+        if not self.cur.execute('INSERT INTO gamble_sx_game (user_id, time_start, time_end, number_big, number_small) VALUES ({0}, {1}, {2}, "{3}", "{4}")'.format(user.id, now_timestamp, 0, [" ".join(["%d"%n for n in number_big])], [" ".join(["%d"%n for n in number_small])])):
             if not self.long_connect: self.close(False)
             return 100
         if not self.cur.execute('SELECT id FROM gamble_sx_game WHERE time_start = {0}'.format(now_timestamp)):
             if not self.long_connect: self.close(False)
             return 100
         gamble_record = self.cur.fetchone()
-        self.current_gamble = ('sx', gamble_record[0], number)
+        self.current_gamble = ('sx', gamble_record[0], (number_big, number_small))
         t = threading.Thread(target = self.wait, args = (game_config.time, self.gambleSxEnd))
         t.setDaemon(True)
         t.start()
@@ -681,8 +711,12 @@ class Game:
             return 3
         game_id = self.current_gamble[1]
         earning = 0
-        if self.current_gamble[2] in face_item.numbers:
-            earning = pay_score * face_item.rate
+        for number in self.current_gamble[2][0]:
+            if number in face_item.numbers:
+                earning += pay_score * face_item.rate_big
+        for number in self.current_gamble[2][1]:
+            if number in face_item.numbers:
+                earning += pay_score * face_item.rate_small
         now_timestamp = self.timestamp()
         if not self.cur.execute('INSERT INTO gamble_sx (user_id, game_id, face, cost, earning, time_pay, time_earn) VALUES ({0}, {1}, "{2}", {3}, {4}, {5}, {6})'.format(user.id, game_id, face, pay_score, earning, now_timestamp, 0)):
             if not self.long_connect: self.close(False)

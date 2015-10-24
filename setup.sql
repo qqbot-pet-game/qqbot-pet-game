@@ -116,7 +116,8 @@ CREATE TABLE `gamble_sx` (
 CREATE TABLE `gamble_sx_game` (
   `id` bigint(20) NOT NULL,
   `user_id` bigint(20) NOT NULL COMMENT 'the user who starts this game',
-  `number` int(11) NOT NULL,
+  `number_big` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
+  `number_small` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
   `time_start` bigint(20) NOT NULL DEFAULT '0',
   `time_end` bigint(20) NOT NULL DEFAULT '0'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
