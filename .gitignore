@@ -57,8 +57,10 @@ docs/_build/
 target/
 
 # Config file
-config/bot.conf
-config/game_config.json
+/config/bot.conf
+/config/game_config.json
+/config/group/
+/config/pm/
 
 # qr code file
 v.jpg

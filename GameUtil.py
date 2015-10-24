@@ -155,7 +155,7 @@ class Game:
                 item = self.cur.fetchone()
                 user = GameUser(_id = item[0], admin_qq = item[1], group_nid = item[2], qq = item[3], score = item[4])
         elif self.is_valid_user_qq(user_qq):
-            if self.cur.execute('SELECT id, admin_qq, group_nid, qq, score FROM user WHERE admin_qq = "{0}" AND group_nid = "{1}" AND qq = "{2}"'.format(user_qq[0], user_qq[1], user_qq[2])):
+            if self.cur.execute('SELECT id, admin_qq, group_nid, qq, score FROM user WHERE group_nid = "{0}" AND qq = "{1}"'.format(user_qq[1], user_qq[2])):
                 item = self.cur.fetchone()
                 user = GameUser(_id = item[0], admin_qq = item[1], group_nid = item[2], qq = item[3], score = item[4])
             else:

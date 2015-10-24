@@ -1,62 +1,42 @@
 [
-    {
-        "name": "Congratulations",
-        "code": 136
-    },
-    {
-        "name": "Firecracker",
-        "code": 137
-    },
-    {
-        "name": "Lantern",
-        "code": 138
-    },
-    {
-        "name": "Richer",
-        "code": 139
-    },
-    {
-        "name": "Karaoke",
-        "code": 140
-    },
-    {
-        "name": "Shopping",
-        "code": 141
-    },
-    {
-        "name": "Email",
-        "code": 142
-    },
-    {
-        "name": "Handsome",
-        "code": 143
-    },
-    {
-        "name": "Cheers",
-        "code": 144
-    },
-    {
-        "name": "Pray",
-        "code": 145
-    },
-    {
-        "name": "BlowUp",
-        "code": 146
-    },
-    {
-        "name": "Lolly",
-        "code": 147
-    },
-    {
-        "name": "Milk",
-        "code": 148
-    },
-    {
-        "name": "Noodles",
-        "code": 149
-    },
-    {
-        "name": "Banana",
-        "code": 150
-    }
+    { "name": "Cleaver",           "code": 112  },
+    { "name": "Watermelon",        "code": 32   },
+    { "name": "Beer",              "code": 113  },
+    { "name": "Basketball",        "code": 114  },
+    { "name": "PingPong",          "code": 115  },
+    { "name": "Coffee",            "code": 63   },
+    { "name": "Rice",              "code": 64   },
+    { "name": "Pig",               "code": 59   },
+    { "name": "Rose",              "code": 33   },
+    { "name": "Wilt",              "code": 34   },
+    { "name": "Lips",              "code": 116  },
+    { "name": "Heart",             "code": 36   },
+    { "name": "BrokenHeart",       "code": 37   },
+    { "name": "Cake",              "code": 38   },
+    { "name": "Lightning",         "code": 91   },
+    { "name": "Bomb",              "code": 92   },
+    { "name": "Dagger",            "code": 93   },
+    { "name": "Soccer",            "code": 29   },
+    { "name": "Ladybug",           "code": 117  },
+    { "name": "Poop",              "code": 72   },
+    { "name": "Moon",              "code": 45   },
+    { "name": "Sun",               "code": 42   },
+    { "name": "Gift",              "code": 39   },
+    { "name": "Hug",               "code": 62   },
+    { "name": "Strong",            "code": 46   },
+    { "name": "Congratulations",   "code": 136  },
+    { "name": "Firecracker",       "code": 137  },
+    { "name": "Lantern",           "code": 138  },
+    { "name": "Richer",            "code": 139  },
+    { "name": "Karaoke",           "code": 140  },
+    { "name": "Shopping",          "code": 141  },
+    { "name": "Email",             "code": 142  },
+    { "name": "Handsome",          "code": 143  },
+    { "name": "Cheers",            "code": 144  },
+    { "name": "Pray",              "code": 145  },
+    { "name": "BlowUp",            "code": 146  },
+    { "name": "Lolly",             "code": 147  },
+    { "name": "Milk",              "code": 148  },
+    { "name": "Noodles",           "code": 149  },
+    { "name": "Banana",            "code": 150  }
 ]

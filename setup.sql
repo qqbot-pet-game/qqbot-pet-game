@@ -324,7 +324,7 @@ ALTER TABLE `sign_in`
 --
 ALTER TABLE `user`
   ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `user_qq` (`qq`,`admin_qq`,`group_nid`) USING BTREE;
+  ADD UNIQUE KEY `user_qq` (`qq`,`group_nid`) USING BTREE;
 
 --
 -- Indexes for table `work`
