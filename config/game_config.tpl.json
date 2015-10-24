@@ -559,7 +559,7 @@
         },
         "sx": {
             "name": "生肖",
-            "time": 12,
+            "time": 120,
             "cnt_big": 1,
             "cnt_small": 10,
             "numbers": [
