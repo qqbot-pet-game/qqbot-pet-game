@@ -369,12 +369,18 @@ class Game:
             if self.random_judge(rule.rate):
                 if abs(rule.score) > 1: add_score = int(rule.score)
                 elif rule.score != 0: 
-                    where_clause = ""
+                    where_clause = "1"
+                    value_clause = "SUM(VALUE)"
                     if rule.condition == "lose":
-                        where_clause = 'ex_type = "gamble" AND value < 0'
-                    if self.cur.execute("SELECT SUM(value) FROM payment WHERE " + where_clause):
-                        add_score = int(abs(int(self.cur.fetchone()[0])) * rule.score)
-                total_add_score += add_score
+                        today = self.datetime()
+                        where_clause = 'ex_type = "gamble" AND time > {0}'.format(self.timestamp(moment.date(today.year, today.month, today.day).date))
+                    if self.cur.execute('SELECT {0} FROM payment WHERE {1}'.format(value_clause, where_clause)):
+                        fetch_value = int(self.cur.fetchone()[0])
+                        if rule.condition == "lose":
+                            if fetch_value < 0: add_score = int(-fetch_value * rule.score)
+                        else:
+                            add_score = int(abs(fetch_value) * rule.score)
+                    total_add_score += add_score
             practiceStatusList.append(add_score)
         if total_add_score != 0:
             pay_time = self.timestamp()
