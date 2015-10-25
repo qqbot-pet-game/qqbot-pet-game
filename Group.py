@@ -292,7 +292,7 @@ class Group:
             elif result == 3:
                 reply_msg += "签到失败！积分余额不足。"
             elif result == 5:
-                reply_msg += "还没有办理{0}或{0}已过期！".format(monthcard_face)
+                reply_msg += "还没有办(/TДT)/理{0}或{0}已过期！".format(monthcard_face)
             else:
                 reply_msg += "签到失败！发生系统错误，请联系管理员。"
             self.reply(reply_msg)
@@ -508,7 +508,7 @@ class Group:
         else:
             return False
     def gamble_sx_end(self, face, result):
-        reply_msg = "押生肖结束了，本局开奖为：\n    大码：{0}\n    小码：{1}".format("、".join(["%d"%n for n in face[0]]), "、".join(["%d"%n for n in face[1]]))
+        reply_msg = "十二生肖结束了，本局开奖为：\n    大码：{0}\n    小码：{1}".format("、".join(["%d"%n for n in face[0]]), "、".join(["%d"%n for n in face[1]]))
         for item in result:
             user_nick = self.game_helper.getItemFromListByProperty(self.user_nicks, 'id', item['user_id'])
             if user_nick: 
@@ -552,7 +552,8 @@ class Group:
         match = re.compile(reg_exp).match(msg_content)
         if match is None: return False
         administrator_qq = self.get_user_qq(msg)
-        if not administrator_qq[2] in self.game_config.default.admin_qq: return False
+        if (not self.__operator.sys_paras['debug']) and (not administrator_qq[2] in self.game_config.default.admin_qq):
+            return False
         administrator_nick = self.get_user_nick(msg)
         user_qq = (administrator_qq[0], administrator_qq[1], match.group(1))
         if (administrator_qq is None) or (administrator_nick is None) or (user_qq is None):
@@ -561,15 +562,15 @@ class Group:
         if match.group(2) == "充值":
             face = match.group(3)
             result = self.game_helper.adminCharge(face, user_qq = user_qq, administrator_qq = administrator_qq)
-            score_gotten = self.game_helper.getCharge(face).score
             if result == 0:
-                reply_msg = "【{0}】成功充值{1}，获得 {2} 积分".format(user_qq[2], face, self.format_long_number(score_gotten))
+                score_gotten = self.game_helper.getCharge(face).score
+                reply_msg = "【{0}】成功充(*￣3￣*)值{1}，获得 {2} 积分".format(user_qq[2], face, self.format_long_number(score_gotten))
             elif result == 1:
-                reply_msg = "【{0}】充值失败，充值金额不合法。可充值的金额有：{1}".format(user_qq[2], "、".join(item.face for item in self.game_config.charges))
+                reply_msg = "【{0}】充(/TДT)/值失败，金额不合法。可充(*￣3￣*)值的金额有：{1}".format(user_qq[2], "、".join(item.face for item in self.game_config.charges))
             elif result == 2:
-                reply_msg = "充值失败，【{0}】尚未在本群注册".format(user_qq[2])
+                reply_msg = "充(/TДT)/值失败，【{0}】尚未在本群注册".format(user_qq[2])
             else:
-                reply_msg = "充值失败，发生系统错误。"
+                reply_msg = "充(/TДT)/值失败，发生系统错误。"
             self.reply(reply_msg)
             return True
         elif match.group(2) == "办理":
@@ -577,11 +578,11 @@ class Group:
             result = self.game_helper.adminChargeMonthcard(face, user_qq = user_qq, administrator_qq = administrator_qq)
             monthcard_item = self.game_helper.getMonthcard(face)
             if isinstance(result, datetime.date):
-                reply_msg = "【{0}】成功办理{1}，{1}有效期至{2}".format(user_qq[2], face, (result + datetime.timedelta(-1)).strftime("%Y年%m月%d日"))
+                reply_msg = "【{0}】成功办(*￣3￣*)理{1}，{1}有效期至{2}".format(user_qq[2], face, (result + datetime.timedelta(-1)).strftime("%Y年%m月%d日"))
             elif result == 2:
-                reply_msg = "办理失败，【{0}】尚未在本群注册".format(user_qq[2])
+                reply_msg = "办(/TДT)/理失败，【{0}】尚未在本群注册".format(user_qq[2])
             else:
-                reply_msg = "充值失败，发生系统错误。"
+                reply_msg = "办(/TДT)/理失败，发生系统错误。"
             self.reply(reply_msg)
             return True
         else:
