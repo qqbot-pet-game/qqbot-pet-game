@@ -54,6 +54,7 @@ class Group:
         self.error_msg = self.game_config.default.error_msg
         self.process_order = [
             "game_test",
+            "game_help",
             "query_info",
             "daily_sign_in",
             "pet_practice",
@@ -206,6 +207,8 @@ class Group:
             return True
         else:
             return False
+
+    def game_help(self, msg):
 
     def query_info(self, msg):
         msg_content = str(msg.content).strip(' ')
@@ -453,13 +456,13 @@ class Group:
         user_nick = self.get_user_nick(msg)
         game_config = self.game_config.gambles.sx
         pour_match = re.compile('押({0})(\d+)'.format('|'.join([str(prize.name) for prize in game_config.prizes]))).match(msg_content)
-        if msg_content == "生肖":
+        if msg_content == "十二生肖":
             if (user_qq is None) or (user_nick is None):
                 self.reply(self.error_msg)
                 return True
             result = self.game_helper.gambleSxStart(user_qq = user_qq)
             if result == 0:
-                reply_msg = "押生肖已开局，将于{0}后结束".format(self.format_time_period(game_config.time * 1000))
+                reply_msg = "十二生肖已开局，将于{0}后结束".format(self.format_time_period(game_config.time * 1000))
                 for prize in game_config.prizes:
                     if prize.type == "sx": reply_msg += "\n{0}  {1}".format(prize.name, "  ".join([("%02d" % number) for number in prize.numbers]))
             elif result == 1:
