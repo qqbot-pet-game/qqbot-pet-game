@@ -24,7 +24,12 @@ def botCopyConfigSingle(src, dest, level_prefix = "", ignore = []):
     if isinstance(src, dict):
         for k,v in src.items():
             if not (level_prefix + k) in ignore:
-                dest[k] = botCopyConfigSingle(src[k], dest[k], level_prefix = level_prefix + k + ".", ignore = ignore)
+                fake_item = dest[k] if k in dest else None
+                if fake_item is None:
+                    if isinstance(v, dict): fake_item = {}
+                    elif isinstance(v, list): fake_item = []
+                    else: fake_item = None
+                dest[k] = botCopyConfigSingle(src[k], fake_item, level_prefix = level_prefix + k + ".", ignore = ignore)
     elif isinstance(src, list):
         if not (level_prefix) in ignore:
             for i in src:
