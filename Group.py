@@ -213,7 +213,7 @@ class Group:
         reply_msg = None
         help_config = self.game_config.help_messages
         help_menu_config = self.game_helper.getItemFromListByProperty(help_config, "name", "menu")
-        match = re.compile("({0})(\?|？)".format("|".join([item.face for item in help_config]))).match(msg_content)
+        match = re.compile("({0})".format("|".join([item.face.replace('?', '\?') for item in help_config]))).match(msg_content)
         if msg_content == help_menu_config.face:
             reply_msg = help_menu_config.message
             self.reply(reply_msg)
