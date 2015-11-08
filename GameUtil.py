@@ -158,7 +158,7 @@ class Game:
                 idx = self.random_select(rates)
                 if idx is None: return None
                 idx_list.append(idx)
-                del rates[idx]
+                rates[idx] = 0
         elif isinstance(rates, dict):
             key_list = rates.keys()
             if len(key_list) < cnt: return None
@@ -166,7 +166,7 @@ class Game:
                 idx = self.random_select(rates)
                 if idx is None: return None
                 idx_list.append(idx)
-                del rates[idx]
+                rates[idx] = 0
         if len(idx_list) != cnt: return None
         else: return idx_list
 
@@ -672,7 +672,7 @@ class Game:
                 if not self.long_connect: self.close(False)
                 return 100
         number_big = [game_config.numbers[number_idx].number for number_idx in number_idx_list[0:game_config.cnt_big]]
-        number_small = [game_config.numbers[number_idx].number for number_idx in number_idx_list[game_config.cnt_big:game_config.cnt_small]]
+        number_small = [game_config.numbers[number_idx].number for number_idx in number_idx_list[game_config.cnt_big:game_config.cnt_big+game_config.cnt_small]]
         if not self.cur.execute('INSERT INTO gamble_sx_game (user_id, time_start, time_end, number_big, number_small) VALUES ({0}, {1}, {2}, "{3}", "{4}")'.format(user.id, now_timestamp, 0, [" ".join(["%d"%n for n in number_big])], [" ".join(["%d"%n for n in number_small])])):
             if not self.long_connect: self.close(False)
             return 100
