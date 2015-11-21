@@ -244,7 +244,8 @@ class Game:
 
     def addUserScore(self, score, user_id = None, user_qq = None):
         if not self.long_connect: self.connect()
-        user = self.getUser(user_id, user_qq, count_frozen_score = False)
+        # user = self.getUser(user_id, user_qq, count_frozen_score = False)
+        user = self.getUser(user_id, user_qq, count_frozen_score = True)
         if not user: 
             if not self.long_connect: self.close()
             return False

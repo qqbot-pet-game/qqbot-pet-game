@@ -240,7 +240,7 @@ class Group:
             pet = self.game_helper.getPet(user_qq = user_qq)
             if pet:
                 level_info = self.game_config.levels[pet.level]
-                reply_msg = "【{0}】的宠物\n宠物等级：{1}{2}\n当前体力：{3}\n目前积分：{4}".format(user_nick, 
+                reply_msg = "【{0}】的宠物\n宠物等 级：{1}{2}\n当前体力：{3}\n目前积 分：{4}".format(user_nick, 
                     level_info.grade, 
                     level_info.level, 
                     pet.power, 
@@ -260,9 +260,10 @@ class Group:
                 return True
             user = self.game_helper.getUser(user_qq = user_qq)
             if user:
-                reply_msg = "【{0}】目前积分：{1}".format(user_nick, self.format_long_number(user.score))
+                reply_msg = "【{0}】目前积 分：{1}".format(user_nick, self.format_long_number(user.score))
             else:
                 reply_msg = self.error_msg
+            print reply_msg
             self.reply(reply_msg)
             return True
         else:
@@ -286,11 +287,11 @@ class Group:
             reply_msg = "【{0}】".format(user_nick)
             if result == 0:
                 if monthcard_face: reply_msg += "使用" + monthcard_face
-                reply_msg += "签到成功！获得 {0} 积分，宠物体力值重设为 {1}。".format(self.format_long_number(score_to_add), self.game_config.default.power)
+                reply_msg += "签到成功！获得 {0} 积 分，宠物体力值重设为 {1}。".format(self.format_long_number(score_to_add), self.game_config.default.power)
             elif result == 2:
                 reply_msg += "签到失败！今天已经签到过了。"
             elif result == 3:
-                reply_msg += "签到失败！积分余额不足。"
+                reply_msg += "签到失败！积 分 余 额 不足。"
             elif result == 5:
                 reply_msg += "还没有办(/TДT)/理{0}或{0}已过期！".format(monthcard_face)
             else:
@@ -323,17 +324,17 @@ class Group:
                     if score_gotten != 0 and rule_item.score != 0:
                         has_hit = True
                         is_positive = "获得" if rule_item.score > 0 else "损失"
-                        if abs(rule_item.score) > 1: reply_msg += "\n{0}了 {1} 点积分".format(is_positive, self.format_long_number(score_gotten))
+                        if abs(rule_item.score) > 1: reply_msg += "\n{0}了 {1} 点积 分".format(is_positive, self.format_long_number(score_gotten))
                         else:
                             if rule_item.condition == "lose":
-                                reply_msg += "\n{0}获得了已损失积分中的{1}%，即 {2} 点积分。".format(is_positive, int(rule_item.score * 100), self.format_long_number(score_gotten))
+                                reply_msg += "\n{0}获得了已损失积分中的{1}%，即 {2} 点积 分。".format(is_positive, int(rule_item.score * 100), self.format_long_number(score_gotten))
                             else:
-                                reply_msg += "\n{0}了 {1} 点积分".format(is_positive, self.format_long_number(score_gotten))
+                                reply_msg += "\n{0}了 {1} 点积 分".format(is_positive, self.format_long_number(score_gotten))
                 if not has_hit: reply_msg += "\n什么也没得到"
             elif result == 1:
                 reply_msg += "\n体力值不足，无法修炼。"
             else:
-                reply_msg += "\n修炼失败，发生系统错误。"
+                reply_msg += "\n修炼失败，发生 系 统 错 误。"
             self.reply(reply_msg)
             return True
         else:
@@ -355,13 +356,13 @@ class Group:
             reply_msg = "【{0}】的宠物".format(user_nick)
             if result == 0:
                 to_level = self.game_config.levels[to_level]
-                reply_msg += "升至{0}{1}，消耗了 {2} 积分".format(to_level.grade, to_level.level, self.format_long_number(score_cost))
+                reply_msg += "升至{0}{1}，消耗了 {2} 积 分".format(to_level.grade, to_level.level, self.format_long_number(score_cost))
             elif result == 1:
-                reply_msg += "无法升级，积分不够了"
+                reply_msg += "无法 升 级，积 分 不够了"
             elif result == 2:
-                reply_msg += "已经是满级了哦"
+                reply_msg += "已经是 满 级 了哦"
             else:
-                reply_msg += "升级失败，发生系统错误"
+                reply_msg += "升 级 失败，发生系统错误"
             self.reply(reply_msg)
             return True
         else:
@@ -385,7 +386,7 @@ class Group:
             elif result == 1:
                 reply_msg += "正在打工，请先让宠物下班"
             elif result == 2:
-                reply_msg += "目前还不能打工，请先升级宠物"
+                reply_msg += "目前还不能打工，请先 升 级 宠物"
             else:
                 reply_msg += "打工失败，发生系统错误"
             self.reply(reply_msg)
@@ -400,7 +401,7 @@ class Group:
             result = self.game_helper.petWorkEnd(pet)
             reply_msg = "【{0}】的宠物".format(user_nick)
             if result == 0:
-                reply_msg += "下班啦～\n领到了 {0} 积分工资".format(self.format_long_number(work_earning))
+                reply_msg += "下班啦～\n领到了 {0} 积 分 工资".format(self.format_long_number(work_earning))
             elif result == 1:
                 reply_msg += "并没有在打工"
             elif result == 2:
@@ -445,10 +446,10 @@ class Group:
             elif result == 1:
                 return False
             elif result == 3:
-                reply_msg = "【{0}】下注失败，积分不足".format(user_nick)
+                reply_msg = "【{0}】下 注 失败，积 分 不足".format(user_nick)
             else:
                 if result == 2: print "invalid face"
-                reply_msg = "【{0}】下注失败，发生系统错误".format(user_nick)
+                reply_msg = "【{0}】下 注 失败，发生系统错误".format(user_nick)
             self.reply(reply_msg)
             return True
         else:
@@ -460,9 +461,9 @@ class Group:
             if user_nick: 
                 user_nick = user_nick['nick']
                 if item['earning'] > 0:
-                    reply_msg += "\n[Cheers]【{0}】赢得了 {1} 积分".format(user_nick, self.format_long_number(item['earning']))
+                    reply_msg += "\n[Cheers]【{0}】赢得了 {1} 积 分".format(user_nick, self.format_long_number(item['earning']))
                 elif item['earning'] < 0:
-                    reply_msg += "\n[BlowUp]【{0}】输掉了 {1} 积分".format(user_nick, self.format_long_number(-item['earning']))
+                    reply_msg += "\n[BlowUp]【{0}】输掉了 {1} 积 分".format(user_nick, self.format_long_number(-item['earning']))
                 else:
                     reply_msg += "\n[Lolly]【{0}】押得四平八稳，没赔也没赚。".format(user_nick)
         self.reply(reply_msg)
@@ -500,23 +501,23 @@ class Group:
             elif result == 1:
                 return False
             elif result == 3:
-                reply_msg = "【{0}】下注失败，积分不足".format(user_nick)
+                reply_msg = "【{0}】下 注 失败，积 分 不足".format(user_nick)
             else:
-                reply_msg = "【{0}】下注失败，发生系统错误".format(user_nick)
+                reply_msg = "【{0}】下 注 失败，发生系统错误".format(user_nick)
             self.reply(reply_msg)
             return True
         else:
             return False
     def gamble_sx_end(self, face, result):
-        reply_msg = "十二生肖结束了，本局开奖为：\n    大码：{0}\n    小码：{1}".format("、".join(["%d"%n for n in face[0]]), "、".join(["%d"%n for n in face[1]]))
+        reply_msg = "十二生肖结束了，本局 开 奖 为：\n    大码：{0}\n    小码：{1}".format("、".join(["%d"%n for n in face[0]]), "、".join(["%d"%n for n in face[1]]))
         for item in result:
             user_nick = self.game_helper.getItemFromListByProperty(self.user_nicks, 'id', item['user_id'])
             if user_nick: 
                 user_nick = user_nick['nick']
                 if item['earning'] > 0:
-                    reply_msg += "\n[Cheers]【{0}】赢得了 {1} 积分".format(user_nick, self.format_long_number(item['earning']))
+                    reply_msg += "\n[Cheers]【{0}】赢得了 {1} 积 分".format(user_nick, self.format_long_number(item['earning']))
                 elif item['earning'] < 0:
-                    reply_msg += "\n[BlowUp]【{0}】输掉了 {1} 积分".format(user_nick, self.format_long_number(-item['earning']))
+                    reply_msg += "\n[BlowUp]【{0}】输掉了 {1} 积 分".format(user_nick, self.format_long_number(-item['earning']))
                 else:
                     reply_msg += "\n[Lolly]【{0}】押得四平八稳，没赔也没赚。".format(user_nick)
         self.reply(reply_msg)
@@ -537,7 +538,7 @@ class Group:
                 prize_item = game_config.prizes[result]
                 reply_msg += "花了 {0} 分参与幸运刮刮乐，获得{1}, 赢得了 {2} 分！".format(self.format_long_number(game_config.cost), prize_item.name, self.format_long_number(prize_item.score))
             elif result == -1:
-                reply_msg += "没有足够的积分参与幸运刮刮乐"
+                reply_msg += "没有足够的 积 分 参与 幸运刮刮乐"
             else:
                 reply_msg += "参与刮刮乐失败，发生系统错误"
             self.reply(reply_msg)
@@ -564,11 +565,11 @@ class Group:
             result = self.game_helper.adminCharge(face, user_qq = user_qq, administrator_qq = administrator_qq)
             if result == 0:
                 score_gotten = self.game_helper.getCharge(face).score
-                reply_msg = "【{0}】成功充(*￣3￣*)值{1}，获得 {2} 积分".format(user_qq[2], face, self.format_long_number(score_gotten))
+                reply_msg = "【{0}】成功充(*￣3￣*)值{1}，获得 {2} 积 分".format(user_qq[2], face, self.format_long_number(score_gotten))
             elif result == 1:
-                reply_msg = "【{0}】充(/TДT)/值失败，金额不合法。可充(*￣3￣*)值的金额有：{1}".format(user_qq[2], "、".join(item.face for item in self.game_config.charges))
+                reply_msg = "【{0}】充(/TДT)/值失败，金 额 不合法。可充(*￣3￣*)值的 金 额 有：{1}".format(user_qq[2], "、".join(item.face for item in self.game_config.charges))
             elif result == 2:
-                reply_msg = "充(/TДT)/值失败，【{0}】尚未在本群注册".format(user_qq[2])
+                reply_msg = "充(/TДT)/值失败，【{0}】尚未在本群 注 册".format(user_qq[2])
             else:
                 reply_msg = "充(/TДT)/值失败，发生系统错误。"
             self.reply(reply_msg)
@@ -580,7 +581,7 @@ class Group:
             if isinstance(result, datetime.date):
                 reply_msg = "【{0}】成功办(*￣3￣*)理{1}，{1}有效期至{2}".format(user_qq[2], face, (result + datetime.timedelta(-1)).strftime("%Y年%m月%d日"))
             elif result == 2:
-                reply_msg = "办(/TДT)/理失败，【{0}】尚未在本群注册".format(user_qq[2])
+                reply_msg = "办(/TДT)/理失败，【{0}】尚未在本群 注 册".format(user_qq[2])
             else:
                 reply_msg = "办(/TДT)/理失败，发生系统错误。"
             self.reply(reply_msg)
