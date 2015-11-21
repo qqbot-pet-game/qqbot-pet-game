@@ -13,7 +13,7 @@ class Game:
         self.long_connect = True if long_connect else False
         self.conn_retain_count = 0
         self.update_config()
-        self.current_gamble = None # should be a tuple: (str:type, int:id, prize_face)
+        self.current_gamble = None # should be a tuple: (str:type, int:id, prize_face, time_start)
         if self.long_connect: self.connect()
 
     def __del__(self):
@@ -549,14 +549,14 @@ class Game:
         1: in gamble
         100: system error
         """
-        if not self.current_gamble is None:
+        game_config = self.game_config.gambles.fqzs
+        if (not self.current_gamble is None) and (self.timestamp() - self.current_gamble[3] > game_config):
             return 1
         if not self.long_connect: self.connect()
         user = self.getUser(user_id = user_id, user_qq = user_qq)
         if not user:
             if not self.long_connect: self.close(False)
             return 100
-        game_config = self.game_config.gambles.fqzs
         now_timestamp = self.timestamp()
         face_idx = self.random_select([item.rate for item in game_config.items])
         if face_idx < 0 or face_idx >= len(game_config.items):
@@ -570,7 +570,7 @@ class Game:
             if not self.long_connect: self.close(False)
             return 100
         gamble_record = self.cur.fetchone()
-        self.current_gamble = ('fqzs', gamble_record[0], str(face))
+        self.current_gamble = ('fqzs', gamble_record[0], str(face), now_timestamp)
         t = threading.Thread(target = self.wait, args = (game_config.time, self.gambleFqzsEnd))
         t.setDaemon(True)
         t.start()
@@ -653,14 +653,14 @@ class Game:
         1: in gamble
         100: system error
         """
-        if not self.current_gamble is None:
+        game_config = self.game_config.gambles.sx
+        if (not self.current_gamble is None) and (self.timestamp() - self.current_gamble[3] > game_config):
             return 1
         if not self.long_connect: self.connect()
         user = self.getUser(user_id = user_id, user_qq = user_qq)
         if not user:
             if not self.long_connect: self.close(False)
             return 100
-        game_config = self.game_config.gambles.sx
         now_timestamp = self.timestamp()
         number_idx_list = self.random_select_multi([item.rate for item in game_config.numbers], game_config.cnt_big + game_config.cnt_small)
         number_big = []
@@ -681,7 +681,7 @@ class Game:
             if not self.long_connect: self.close(False)
             return 100
         gamble_record = self.cur.fetchone()
-        self.current_gamble = ('sx', gamble_record[0], (number_big, number_small))
+        self.current_gamble = ('sx', gamble_record[0], (number_big, number_small), now_timestamp)
         t = threading.Thread(target = self.wait, args = (game_config.time, self.gambleSxEnd))
         t.setDaemon(True)
         t.start()
