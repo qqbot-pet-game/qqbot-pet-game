@@ -550,7 +550,7 @@ class Game:
         100: system error
         """
         game_config = self.game_config.gambles.fqzs
-        if (not self.current_gamble is None) and (self.timestamp() - self.current_gamble[3] > game_config):
+        if (not self.current_gamble is None) and (self.timestamp() - self.current_gamble[3] < game_config.time * 1000):
             return 1
         if not self.long_connect: self.connect()
         user = self.getUser(user_id = user_id, user_qq = user_qq)
@@ -654,7 +654,7 @@ class Game:
         100: system error
         """
         game_config = self.game_config.gambles.sx
-        if (not self.current_gamble is None) and (self.timestamp() - self.current_gamble[3] > game_config):
+        if (not self.current_gamble is None) and (self.timestamp() - self.current_gamble[3] < game_config.time * 1000):
             return 1
         if not self.long_connect: self.connect()
         user = self.getUser(user_id = user_id, user_qq = user_qq)
