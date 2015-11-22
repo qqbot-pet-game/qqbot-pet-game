@@ -234,7 +234,7 @@ class Game:
         if not user:
             if not self.long_connect: self.close()
             return False
-        if user.score == score:
+        if user.totalScore() == score :
             if not self.long_connect: self.close()
             return True
         if not self.cur.execute('UPDATE user SET score = {0} WHERE id = {1}'.format(int(score), user.id)):
@@ -250,11 +250,11 @@ class Game:
         if not user: 
             if not self.long_connect: self.close()
             return False
-        score = score + user.score
-        if score < 0: 
+        score = score + user.totalScore()
+        if score < 0:
             if not self.long_connect: self.close()
             return False
-        self.setUserScore(score + user.frozenScore, user.id)
+        self.setUserScore(score - (user.frozenScore if False else 0), user.id)
         if not self.long_connect: self.close(True)
         return True
 
