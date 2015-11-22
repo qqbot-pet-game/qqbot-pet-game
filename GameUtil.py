@@ -184,9 +184,10 @@ class Game:
             else:
                 if self.cur.execute('INSERT INTO user (admin_qq, group_nid, qq, score) VALUES ("{0}", "{1}", "{2}", {3})'.format(user_qq[0], user_qq[1], user_qq[2], self.game_config.default.score)) and not no_insert:
                     user = self.getUser(user_qq = user_qq, no_insert = True)
-        if not user is None and count_frozen_score:
+        if not user is None:
             frozen_score = self.getUserFrozenScore(user.id)
             user.score = user.score - frozen_score
+            user.frozenScore = frozen_score
         if not self.long_connect: self.close(True)
         return user
 
@@ -253,7 +254,7 @@ class Game:
         if score < 0: 
             if not self.long_connect: self.close()
             return False
-        self.setUserScore(int(score), user.id)
+        self.setUserScore(score + user.frozenScore, user.id)
         if not self.long_connect: self.close(True)
         return True
 
@@ -308,7 +309,7 @@ class Game:
             return False
         if not isinstance(payment_time, int): payment_time = self.timestamp()
         if self.cur.execute('INSERT INTO payment (user_id, ex_type, ex_id, value, time) VALUES ({0}, "{1}", {2}, {3}, {4})'.format(user_id, pay_type, pay_id, payment_earning, payment_time)):
-            if not self.addUserScore(payment_earning, user_id):
+            if not self.addUserScore(int(payment_earning), user_id):
                 if not self.long_connect: self.close(False)
                 return False
         else:
@@ -873,6 +874,9 @@ class GameUser:
         self.admin_qq = admin_qq
         self.group_nid = group_nid
         self.score = score
+        self.frozenScore = 0
+    def totalScore(self):
+        return self.score + self.frozenScore
 
 class GamePet:
     def __init__(self,
