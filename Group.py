@@ -14,6 +14,7 @@ from HttpClient import *
 
 import re
 import datetime, time
+import logging
 
 reload(sys)
 sys.setdefaultencoding("utf-8")
