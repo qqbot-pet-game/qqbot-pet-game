@@ -15,6 +15,7 @@ from HttpClient import *
 import re
 import datetime, time
 import logging
+import traceback
 
 reload(sys)
 sys.setdefaultencoding("utf-8")
@@ -100,6 +101,7 @@ class Group:
                 print e
                 if self.__operator.sys_paras['debug']: raise e
                 logging.warning("Handle group message error")
+                logging.warning(traceback.format_exc())
         self.msg_list.append(msg)
 
     def reply(self, reply_content, fail_times=0):
