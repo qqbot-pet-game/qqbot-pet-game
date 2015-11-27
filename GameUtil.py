@@ -386,6 +386,9 @@ class Game:
         practice_rules = self.game_config.levels[pet.level].practices
         practiceStatusList = []
         total_add_score = 0
+        if pet.power < self.game_config.default.power_cost_of_practice:
+            if not self.long_connect: self.close(False)
+            return 1
         if not self.addPetPower(-self.game_config.default.power_cost_of_practice, pet.id):
             if not self.long_connect: self.close(False)
             return 100
