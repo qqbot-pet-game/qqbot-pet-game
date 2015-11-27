@@ -394,17 +394,22 @@ class Game:
             if self.random_judge(rule.rate):
                 if abs(rule.score) > 1: add_score = int(rule.score)
                 elif rule.score != 0: 
-                    where_clause = "1"
+                    where_clause = "user_id = {0}".format(pet.user.id)
                     value_clause = "SUM(VALUE)"
                     if rule.condition == "lose":
                         today = self.datetime()
-                        where_clause = 'ex_type = "gamble" AND time > {0}'.format(self.timestamp(moment.date(today.year, today.month, today.day).date))
+                        where_clause += ' AND ex_type = "gamble" AND time > {0}'.format(self.timestamp(moment.date(today.year, today.month, today.day).date))
                     if self.cur.execute('SELECT {0} FROM payment WHERE {1}'.format(value_clause, where_clause)):
-                        fetch_value = int(self.cur.fetchone()[0])
-                        if rule.condition == "lose":
-                            if fetch_value < 0: add_score = int(-fetch_value * rule.score)
-                        else:
-                            add_score = int(abs(fetch_value) * rule.score)
+                        sum_value = self.cur.fetchone()[0]
+                        if sum_value:
+                            fetch_value = int()
+                            if rule.condition == "lose":
+                                if fetch_value < 0: add_score = int(-fetch_value * rule.score)
+                            else:
+                                add_score = int(abs(fetch_value) * rule.score)
+                    else:
+                        if not self.long_connect: self.close(False)
+                        return 100
                     total_add_score += add_score
             practiceStatusList.append(add_score)
         if total_add_score != 0:
