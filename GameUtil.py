@@ -5,6 +5,14 @@ import time, datetime, moment
 import random
 import threading
 import copy
+import logging
+
+logging.basicConfig(
+    filename='smartqq.log',
+    level=logging.DEBUG,
+    format='%(asctime)s  %(filename)s[line:%(lineno)d] %(levelname)s %(message)s',
+    datefmt='%a, %d %b %Y %H:%M:%S',
+)
 
 class Game:
     def __init__(self, group_manager, long_connect = False, config_path = None):
@@ -333,9 +341,11 @@ class Game:
         if not self.long_connect: self.connect()
         pet = self.getPet(user_id = user_id, user_qq = user_qq)
         if not pet: 
+            logging.warning("<detected error> pet not found")
             if not self.long_connect: self.close(False)
             return 100
         if not self.setPetPower(self.game_config.default.power, pet.id):
+            logging.warning("<detected error> pet power reset failed")
             if not self.long_connect: self.close(False)
             return 100
         user = pet.user
@@ -363,12 +373,15 @@ class Game:
                 signin_record = self.cur.fetchone()
                 signin_id = signin_record[0]
                 if not self.pay(user.id, 'sign_in', signin_id, 'earning', 'time'):
+                    logging.warning("<detected error> add user score failed")
                     if not self.long_connect: self.close(False)
                     return 100
             else:
+                logging.warning("<detected error> cannot find the user")
                 if not self.long_connect: self.close(False)
                 return 100
         else:
+            logging.warning("<detected error> insert sign_in record failed")
             if not self.long_connect: self.close(False)
             return 100
         if not self.long_connect: self.close(True)
@@ -381,7 +394,8 @@ class Game:
         list: pay amount for each rule
         """
         if not isinstance(pet, GamePet):
-            return 2
+            logging.warning("<detected error> pet is not instance of GamePet")
+            return 100
         if not self.long_connect: self.connect()
         practice_rules = self.game_config.levels[pet.level].practices
         practiceStatusList = []
@@ -390,6 +404,7 @@ class Game:
             if not self.long_connect: self.close(False)
             return 1
         if not self.addPetPower(-self.game_config.default.power_cost_of_practice, pet.id):
+            logging.warning("<detected error> deduct pet power failed")
             if not self.long_connect: self.close(False)
             return 100
         for rule in practice_rules:
@@ -411,6 +426,7 @@ class Game:
                             else:
                                 add_score = int(abs(fetch_value) * rule.score)
                     else:
+                        logging.warning("<detected error> cannot find the payment")
                         if not self.long_connect: self.close(False)
                         return 100
                     total_add_score += add_score
@@ -422,11 +438,13 @@ class Game:
                         and self.pay(pet.user.id, "practice", self.cur.fetchone()[0], 'earning', 'time'):
                     pass
                 else:
+                    logging.warning("<detected error> query practice record failed")
                     if not self.long_connect: self.close(False)
-                    return 2
+                    return 100
             else:
+                logging.warning("<detected error> insert practice record failed")
                 if not self.long_connect: self.close(False)
-                return 2
+                return 100
         if not self.long_connect: self.close(True)
         return practiceStatusList
 
@@ -438,6 +456,7 @@ class Game:
         100: system error
         """
         if not isinstance(pet, GamePet):
+            logging.warning("<detected error> pet is not instance of GamePet")
             return 100
         if not pet.level + 1 < len(self.game_config.levels):
             return 2
@@ -446,6 +465,7 @@ class Game:
         score_cost = self.game_config.levels[to_level].score
         pay_time = self.timestamp()
         if not self.cur.execute("INSERT INTO level_up (pet_id, from_level, to_level, cost, time) VALUES ({0}, {1}, {2}, {3}, {4})".format(pet.id, pet.level, to_level, score_cost, pay_time)):
+            logging.warning("<detected error> insert level_up record failed")
             if not self.long_connect: self.close(False)
             return 100
         if self.cur.execute("SELECT id FROM level_up WHERE pet_id = {0} AND time = {1}".format(pet.id, pay_time)):
@@ -453,9 +473,11 @@ class Game:
                 if not self.long_connect: self.close(False)
                 return 1
         else:
+            logging.warning("<detected error> query level_up record failed")
             if not self.long_connect: self.close(False)
             return 100
         if not self.cur.execute("UPDATE pet SET level = {0} WHERE id = {1}".format(to_level, pet.id)):
+            logging.warning("<detected error> update pet level failed")
             if not self.long_connect: self.close(False)
             return 100
         if not self.long_connect: self.close(True)
@@ -469,6 +491,7 @@ class Game:
         100: system error
         """
         if not isinstance(pet, GamePet):
+            logging.warning("<detected error> pet is not instance of GamePet")
             return 100
         score_earn = self.game_config.levels[pet.level].earning
         if score_earn <= 0:
@@ -480,6 +503,7 @@ class Game:
             if not self.long_connect: self.close(False)
             return 1
         if not self.cur.execute("INSERT INTO work (pet_id, time_start, time_end, earning) VALUES ({0}, {1}, {2}, {3})".format(pet.id, now_timestamp, 0, score_earn)):
+            logging.warning("<detected error> insert work record failed")
             if not self.long_connect: self.close(False)
             return 100
         if not self.long_connect: self.close(True)
@@ -494,7 +518,8 @@ class Game:
         100: system error
         """
         if not isinstance(pet, GamePet):
-            return 3
+            logging.warning("<detected error> pet is not instance of GamePet")
+            return 100
         if not self.long_connect: self.connect()
         now_timestamp = self.timestamp()
         work_interval = self.game_config.default.work_interval * 1000
@@ -506,11 +531,13 @@ class Game:
                 if not self.long_connect: self.close(False)
                 return 2
             if not self.cur.execute("UPDATE work SET time_end = {0} WHERE id = {1}".format(now_timestamp, record_id)):
+                logging.warning("<detected error> update work record failed")
                 if not self.long_connect: self.close(False)
                 return 100
             if not self.pay(pet.user.id, 'work', record_id, 'earning', 'time_end'):
+                logging.warning("<detected error> add user score failed")
                 if not self.long_connect: self.close(False)
-                return 3
+                return 100
         else:
             if not self.long_connect: self.close(False)
             return 1
@@ -537,6 +564,7 @@ class Game:
             elif isinstance(pay_time, str):
                 gamble_time = gamble_record[1]
         if (gamble_earning is None) or (gamble_time is None) or (user_id is None):
+            logging.warning("<detected error> query gamble info failed")
             if not self.long_connect: self.close(False)
             return False
         if not isinstance(gamble_time, int): gamble_time = self.timestamp()
@@ -544,9 +572,11 @@ class Game:
                 and self.cur.execute('SELECT id, user_id FROM gamble WHERE ex_type = "{0}" and ex_id = {1}'.format(gamble_type, gamble_id)):
             gamble_record = self.cur.fetchone()
             if not self.pay(gamble_record[1], 'gamble', gamble_record[0], 'earning', 'time'):
+                logging.warning("<detected error> pay failed")
                 if not self.long_connect: self.close(False)
                 return False
         else:
+            logging.warning("<detected error> insert gamble record failed")
             if not self.long_connect: self.close(False)
             return False
         if not self.long_connect: self.close(True)
@@ -564,18 +594,22 @@ class Game:
         if not self.long_connect: self.connect()
         user = self.getUser(user_id = user_id, user_qq = user_qq)
         if not user:
+            logging.warning("<detected error> user not found")
             if not self.long_connect: self.close(False)
             return 100
         now_timestamp = self.timestamp()
         face_idx = self.random_select([item.rate for item in game_config.items])
         if face_idx < 0 or face_idx >= len(game_config.items):
+            logging.warning("<detected error> random select out of range")
             if not self.long_connect: self.close(False)
             return 100
         face = game_config.items[face_idx].name
         if not self.cur.execute('INSERT INTO gamble_fqzs_game (user_id, time_start, time_end, face) VALUES ({0}, {1}, {2}, "{3}")'.format(user.id, now_timestamp, 0, face)):
+            logging.warning("<detected error> insert gamble_fqzs_game record failed")
             if not self.long_connect: self.close(False)
             return 100
         if not self.cur.execute('SELECT id FROM gamble_fqzs_game WHERE time_start = {0}'.format(now_timestamp)):
+            logging.warning("<detected error> query gamble_fqzs_game record failed")
             if not self.long_connect: self.close(False)
             return 100
         gamble_record = self.cur.fetchone()
@@ -603,6 +637,7 @@ class Game:
         if not self.long_connect: self.connect()
         user = self.getUser(user_id = user_id, user_qq = user_qq)
         if not user:
+            logging.warning("<detected error> user not found")
             if not self.long_connect: self.close(False)
             return 100
         if user.score < pay_score:
@@ -614,6 +649,7 @@ class Game:
             earning = pay_score * face_item.rate
         now_timestamp = self.timestamp()
         if not self.cur.execute('INSERT INTO gamble_fqzs (user_id, game_id, face, cost, earning, time_pay, time_earn) VALUES ({0}, {1}, "{2}", {3}, {4}, {5}, {6})'.format(user.id, game_id, face, pay_score, earning, now_timestamp, 0)):
+            logging.warning("<detected error> insert gamble_fqzs record failed")
             if not self.long_connect: self.close(False)
             return 100
         if not self.long_connect: self.close(True)
@@ -632,6 +668,7 @@ class Game:
         now_timestamp = self.timestamp()
         game_config = self.game_config.gambles.fqzs
         if not self.cur.execute('UPDATE gamble_fqzs_game SET time_end = {0} WHERE id = {1}'.format(now_timestamp, game_id)):
+            logging.warning("<detected error> update gamble_fqzs_game record failed")
             if not self.long_connect: self.close(False)
             return 100
         self.cur.execute('UPDATE gamble_fqzs SET time_earn = {0} WHERE game_id = {1}'.format(now_timestamp, game_id))
@@ -644,6 +681,7 @@ class Game:
         result = []
         for record in pour_records:
             if not self.addGamble('fqzs', record['id'], 'earning - cost', 'time_earn'):
+                logging.warning("<detected error> add gamble failed")
                 if not self.long_connect: self.close(False)
                 return 100
             item = self.getItemFromListByProperty(result, 'user_id', record['user_id'])
@@ -668,6 +706,7 @@ class Game:
         if not self.long_connect: self.connect()
         user = self.getUser(user_id = user_id, user_qq = user_qq)
         if not user:
+            logging.warning("<detected error> user not found")
             if not self.long_connect: self.close(False)
             return 100
         now_timestamp = self.timestamp()
@@ -675,18 +714,22 @@ class Game:
         number_big = []
         number_small = []
         if number_idx_list is None:
+            logging.warning("<detected error> random select failed")
             if not self.long_connect: self.close(False)
             return 100
         for number_idx in number_idx_list:
             if number_idx < 0 or number_idx >= len(game_config.numbers):
+                logging.warning("<detected error> random select range out of range")
                 if not self.long_connect: self.close(False)
                 return 100
         number_big = [game_config.numbers[number_idx].number for number_idx in number_idx_list[0:game_config.cnt_big]]
         number_small = [game_config.numbers[number_idx].number for number_idx in number_idx_list[game_config.cnt_big:game_config.cnt_big+game_config.cnt_small]]
         if not self.cur.execute('INSERT INTO gamble_sx_game (user_id, time_start, time_end, number_big, number_small) VALUES ({0}, {1}, {2}, "{3}", "{4}")'.format(user.id, now_timestamp, 0, [" ".join(["%d"%n for n in number_big])], [" ".join(["%d"%n for n in number_small])])):
+            logging.warning("<detected error> insert gamble_sx_game record failed")
             if not self.long_connect: self.close(False)
             return 100
         if not self.cur.execute('SELECT id FROM gamble_sx_game WHERE time_start = {0}'.format(now_timestamp)):
+            logging.warning("<detected error> query gamble_sx_game record failed")
             if not self.long_connect: self.close(False)
             return 100
         gamble_record = self.cur.fetchone()
@@ -714,6 +757,7 @@ class Game:
         if not self.long_connect: self.connect()
         user = self.getUser(user_id = user_id, user_qq = user_qq)
         if not user:
+            logging.warning("<detected error> user not found")
             if not self.long_connect: self.close(False)
             return 100
         if user.score < pay_score:
@@ -729,6 +773,7 @@ class Game:
                 earning += pay_score * face_item.rate_small
         now_timestamp = self.timestamp()
         if not self.cur.execute('INSERT INTO gamble_sx (user_id, game_id, face, cost, earning, time_pay, time_earn) VALUES ({0}, {1}, "{2}", {3}, {4}, {5}, {6})'.format(user.id, game_id, face, pay_score, earning, now_timestamp, 0)):
+            logging.warning("<detected error> insert gamble_sx record failed")
             if not self.long_connect: self.close(False)
             return 100
         if not self.long_connect: self.close(True)
@@ -747,6 +792,7 @@ class Game:
         now_timestamp = self.timestamp()
         game_config = self.game_config.gambles.sx
         if not self.cur.execute('UPDATE gamble_sx_game SET time_end = {0} WHERE id = {1}'.format(now_timestamp, game_id)):
+            logging.warning("<detected error> update gamble_sx_game failed")
             if not self.long_connect: self.close(False)
             return 100
         self.cur.execute('UPDATE gamble_sx SET time_earn = {0} WHERE game_id = {1}'.format(now_timestamp, game_id))
@@ -759,6 +805,7 @@ class Game:
         result = []
         for record in pour_records:
             if not self.addGamble('sx', record['id'], 'earning - cost', 'time_earn'):
+                logging.warning("<detected error> add gamble failed")
                 if not self.long_connect: self.close(False)
                 return 100
             item = self.getItemFromListByProperty(result, 'user_id', record['user_id'])
@@ -780,6 +827,7 @@ class Game:
         if not self.long_connect: self.connect()
         user = self.getUser(user_id = user_id, user_qq = user_qq)
         if not user:
+            logging.warning("<detected error> user not found")
             if not self.long_connect: self.close(False)
             return -100
         game_config = self.game_config.gambles.ggl
@@ -789,7 +837,7 @@ class Game:
         prize_cnt = len(game_config.prizes)
         idx = self.random_select([item.rate for item in game_config.prizes])
         if idx < 0 or idx >= prize_cnt:
-            print idx
+            logging.warning("<detected error> random select out of range")
             if not self.long_connect: self.close(False)
             return -100
         prize_item = game_config.prizes[idx]
@@ -799,6 +847,7 @@ class Game:
                 and self.addGamble('ggl', self.cur.fetchone()[0], 'earning - cost', 'time'):
             pass
         else:
+            logging.warning("<detected error> insert gamble_ggl failed")
             if not self.long_connect: self.close(False)
             return -100
         if not self.long_connect: self.close(True)
@@ -821,12 +870,14 @@ class Game:
             if not self.long_connect: self.close(False)
             return 2
         if not administrator:
+            logging.warning("<detected error> administrator not found")
             if not self.long_connect: self.close(False)
             return 100
         now_timestamp = self.timestamp()
         if not self.cur.execute('INSERT INTO charge (user_id, administrator_id, face, score, time) VALUES ({0}, {1}, "{2}", {3}, {4})'.format(user.id, administrator.id, face, charge_item.score, now_timestamp)) \
                 or not self.cur.execute('SELECT id FROM charge WHERE user_id = {0} AND administrator_id = {1} AND time = {2}'.format(user.id, administrator.id, now_timestamp)) \
                 or not self.pay(user.id, 'charge', self.cur.fetchone()[0], 'score', 'time'):
+            logging.warning("<detected error> insert charge record failed")
             if not self.long_connect: self.close(False)
             return 100
         if not self.long_connect: self.close(True)
@@ -849,6 +900,7 @@ class Game:
             if not self.long_connect: self.close(False)
             return 2
         if not administrator:
+            logging.warning("<detected error> administrator not found")
             if not self.long_connect: self.close(False)
             return 100
         now_timestamp = self.timestamp()
@@ -865,6 +917,7 @@ class Game:
         start_timestamp = self.timestamp(start_time)
         end_timestamp = self.timestamp(end_time)
         if not self.cur.execute('INSERT INTO monthcard (user_id, administrator_id, face, time_register, time_start, time_end) VALUES ({0}, {1}, "{2}", {3}, {4}, {5})'.format(user.id, administrator.id, face, now_timestamp, start_timestamp, end_timestamp)):
+            logging.warning("<detected error> insert monthcard record not found")
             if not self.long_connect: self.close(False)
             return 100
         if not self.long_connect: self.close(True)
