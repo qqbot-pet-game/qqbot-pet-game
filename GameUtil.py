@@ -81,6 +81,13 @@ class Game:
         else:
             return False
 
+    def forceClose(self, accept = False):
+        if not self.long_connect:
+            select.conn_retain_count = 0
+        self.cur.close()
+        if accept: self.conn.commit()
+        self.conn.close()
+
     def wait(self, wait_time, callback, *callback_args):
         time.sleep(wait_time)
         callback(*callback_args)

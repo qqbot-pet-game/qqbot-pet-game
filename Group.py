@@ -98,10 +98,14 @@ class Group:
             except ConfigParser.NoOptionError as er:
                 logging.warning(str(er) + "没有找到" + func + "功能的对应设置，请检查共有配置文件是否正确设置功能参数")
             except Exception, e:
-                print e
                 if self.__operator.sys_paras['debug']: raise e
                 logging.warning("Handle group message error")
                 logging.warning(traceback.format_exc())
+                try:
+                    game_helper.forceClose(False)
+                except Exception, e:
+                    logging.warning("Force close database connection failed.")
+                    logging.warning(traceback.format_exc())
         self.msg_list.append(msg)
 
     def reply(self, reply_content, fail_times=0):
