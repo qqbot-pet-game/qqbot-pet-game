@@ -420,14 +420,14 @@ class Game:
                 if abs(rule.score) > 1: add_score = int(rule.score)
                 elif rule.score != 0: 
                     where_clause = "user_id = {0}".format(pet.user.id)
-                    value_clause = "SUM(VALUE)"
+                    value_clause = "SUM(value)"
                     if rule.condition == "lose":
                         today = self.datetime()
-                        where_clause += ' AND ex_type = "gamble" AND time > {0}'.format(self.timestamp(moment.date(today.year, today.month, today.day).date))
+                        where_clause += ' AND ex_type = "gamble" AND time > {0} AND value < 0'.format(self.timestamp(moment.date(today.year, today.month, today.day).date))
                     if self.cur.execute('SELECT {0} FROM payment WHERE {1}'.format(value_clause, where_clause)):
                         sum_value = self.cur.fetchone()[0]
                         if sum_value:
-                            fetch_value = int()
+                            fetch_value = int(sum_value)
                             if rule.condition == "lose":
                                 if fetch_value < 0: add_score = int(-fetch_value * rule.score)
                             else:
@@ -436,7 +436,7 @@ class Game:
                         logging.warning("<detected error> cannot find the payment")
                         if not self.long_connect: self.close(False)
                         return 100
-                    total_add_score += add_score
+            total_add_score += add_score
             practiceStatusList.append(add_score)
         if total_add_score != 0:
             pay_time = self.timestamp()
